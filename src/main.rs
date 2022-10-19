@@ -1,40 +1,31 @@
 extern crate cairo;
 
-use cairo::{Context, Format, ImageSurface, Error};
+use cairo::{Context, Error, Format, ImageSurface};
 use std::fs::File;
 
-struct Vec2 {
-    x: f32,
-    y: f32
+struct Pos {
+    x: f64,
+    y: f64,
 }
 
-fn draw_rectangle(p_1: Vec2, p_2: Vec2, p_3: Vec2, p_4: Vec2) -> Result<ImageSurface, Error> {
+fn draw_polygon<const N: usize>(points: [Pos; N]) -> Result<ImageSurface, Error> {
     let surface = ImageSurface::create(Format::ARgb32, 600, 600)?;
     let cr = Context::new(&surface)?;
     cr.scale(600.0, 600.0);
-
     cr.set_line_width(0.01);
     cr.set_source_rgb(0.0, 0.0, 0.0);
-    // cr.rectangle(); // TODO
-    cr.stroke()?;
-    return Ok(surface);
-}
-
-fn draw() -> Result<ImageSurface, Error> {
-    let surface = ImageSurface::create(Format::ARgb32, 600, 600)?;
-    let cr = Context::new(&surface)?;
-    cr.scale(600.0, 600.0);
-
-    cr.set_line_width(0.01);
-    cr.set_source_rgb(0.0, 0.0, 0.0);
-    cr.rectangle(0.25, 0.25, 0.5, 0.5);
-    cr.rectangle(0.5, 0.5, 0.5, 0.5);
+    cr.move_to(points[0].x, points[0].y);
+    for point in &points[1..] {
+        cr.line_to(point.x, point.y);
+    }
+    cr.line_to(points[0].x, points[0].y);
     cr.stroke()?;
     return Ok(surface);
 }
 
 fn main() {
-    let surface = draw().expect("Failed to draw image");
+    let points = [Pos {x: 0.25, y: 0.25}, Pos {x: 0.75, y: 0.25}, Pos { x: 0.75, y: 0.75 }];
+    let surface = draw_polygon(points).expect("Failed to draw image");
     let mut file = File::create("file.png").expect("Can't create file");
     match surface.write_to_png(&mut file) {
         Ok(_) => println!("file.png created"),
