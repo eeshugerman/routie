@@ -24,7 +24,11 @@ fn draw_polygon<const N: usize>(points: [Pos; N]) -> Result<ImageSurface, Error>
 }
 
 fn main() {
-    let points = [Pos {x: 0.25, y: 0.25}, Pos {x: 0.75, y: 0.25}, Pos { x: 0.75, y: 0.75 }];
+    let points = [
+        Pos { x: 0.25, y: 0.25 },
+        Pos { x: 0.75, y: 0.25 },
+        Pos { x: 0.75, y: 0.75 },
+    ];
     let surface = draw_polygon(points).expect("Failed to draw image");
     let mut file = File::create("file.png").expect("Can't create file");
     match surface.write_to_png(&mut file) {
