@@ -1,12 +1,14 @@
 extern crate cairo;
 extern crate nalgebra;
 
-use std::fs::File;
+use std::{fs::File, f64::consts::PI};
 
 use cairo::{Context, Error, Format, ImageSurface};
-use nalgebra::Vector2;
+use nalgebra::{Vector2, Rotation2, Point2};
 
 static IMAGE_SIZE: i32 = 600;
+static I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
+static J_HAT: Vector2<f64> = Vector2::new(0.0, 1.0);
 
 fn get_default_context(surface: &ImageSurface) -> Result<Context, Error> {
     let cr = Context::new(surface)?;
@@ -16,7 +18,7 @@ fn get_default_context(surface: &ImageSurface) -> Result<Context, Error> {
     Ok(cr)
 }
 
-fn draw_polylines<const N: usize>(cr: &Context, points: [Vector2<f64>; N]) {
+fn draw_polylines<const N: usize>(cr: &Context, points: [Point2<f64>; N]) {
     cr.move_to(points[0].x, points[0].y);
     for point in &points[1..] {
         cr.line_to(point.x, point.y);
@@ -24,22 +26,23 @@ fn draw_polylines<const N: usize>(cr: &Context, points: [Vector2<f64>; N]) {
     cr.line_to(points[0].x, points[0].y);
 }
 
-// fn draw_regular_polygon(cr: &Context, pos: Vector2<f64>, n: i8, r: f64) {
-// }
+fn draw_regular_polygon(cr: &Context, pos: Point2<f64>, n: i8, r: f64) {
+    let start = pos + r * I_HAT;
+    cr.move_to(start.x, start.y);
+    for x in 1..n {
+        let rot = Rotation2::new((x as f64 / n as f64) * 2.0 * PI);
+        let point = pos + r * rot.matrix() * I_HAT;
+        cr.line_to(point.x, point.y);
+    }
+    cr.line_to(start.x, start.y);
+}
 
 fn main() {
     let points = [
-        Vector2::new(0.25, 0.25),
-        Vector2::new(0.25, 0.25),
-        Vector2::new(0.75, 0.25),
-        Vector2::new(0.25, 0.75),
-        Vector2::new(0.75, 0.75),
-    ];
-    let more_points = [
-        Vector2::new(0.35, 0.35),
-        Vector2::new(0.85, 0.35),
-        Vector2::new(0.35, 0.85),
-        Vector2::new(0.85, 0.85),
+        Point2::new(0.25, 0.25),
+        Point2::new(0.75, 0.25),
+        Point2::new(0.25, 0.75),
+        Point2::new(0.75, 0.75),
     ];
 
     let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
@@ -48,9 +51,9 @@ fn main() {
     draw_polylines(&cr, points);
     cr.stroke().unwrap();
 
-    draw_polylines(&cr, more_points);
-    cr.stroke().unwrap();
+    draw_regular_polygon(&cr, Point2::new(0.5, 0.5), 6, 0.15);
+    cr.fill().unwrap();
 
-    let mut file = File::create("file1.png").unwrap();
+    let mut file = File::create("file.png").unwrap();
     surface.write_to_png(&mut file).unwrap();
 }
