@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-png = "0.17.0"
+png = "0.17"
 cairo-rs = { version = "0.15", features = ["png"] }
+nalgebra = "0.31"
