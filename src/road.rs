@@ -6,16 +6,16 @@ use crate::actor::Actor;
 
 pub struct RoadJunction {
     pub pos: Point2<f64>,
-    pub segments: Vec<RoadSegment>,
+    // pub segments: HashSet<&RoadSegment>, // or Vec? should order matter?
     // lane_inputs: HashTable<>,
     // lane_outputs: HashTable<>
 }
 
-pub struct RoadSegment {
+pub struct RoadSegment<'a> {
     /// off-road only, otherwise they belong to lanes
-    actors: Vec<Actor>,
-    begin_junction: RoadJunction,
-    end_junction: RoadJunction,
+    // actors: BTreeMap<PosParam, Actor>,
+    pub begin_junction: &'a RoadJunction,
+    pub end_junction: &'a RoadJunction,
     // forward_lanes: Vec<RoadLane>,
     // backward_lanes: Vec<RoadLane>
 }

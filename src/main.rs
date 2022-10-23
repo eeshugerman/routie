@@ -2,17 +2,16 @@ extern crate cairo;
 extern crate nalgebra;
 
 mod actor;
-mod road;
 mod draw;
+mod road;
 
-use std::{fs::File, f64::consts::PI};
+use std::{f64::consts::PI, fs::File};
 
-use cairo::{ImageSurface, Format};
-use draw::{IMAGE_SIZE, get_default_context, Draw};
-use nalgebra::{Point2};
+use cairo::{Format, ImageSurface};
+use draw::{get_default_context, Draw, IMAGE_SIZE};
+use nalgebra::Point2;
 
 use road::{RoadJunction, RoadSegment};
-
 
 fn main() {
     let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
@@ -23,8 +22,21 @@ fn main() {
     // draw_regular_polygon(&cr, Point2::new(0.5, 0.5), 6, 0.15);
     // cr.fill().unwrap();
 
-    let junction = RoadJunction {pos: Point2::new(0.25, 0.25), segments: vec![] };
-    junction.draw(&cr);
+    let junction_1 = RoadJunction {
+        pos: Point2::new(0.25, 0.25),
+        // segments: vec![],
+    };
+    let junction_2 = RoadJunction {
+        pos: Point2::new(0.75, 0.75),
+        // segments: vec![],
+    };
+    let segment = RoadSegment {
+        begin_junction: &junction_1,
+        end_junction: &junction_2
+    };
+    segment.draw(&cr).unwrap();
+    junction_1.draw(&cr).unwrap();
+    junction_2.draw(&cr).unwrap();
 
     let mut file = File::create("file.png").unwrap();
     surface.write_to_png(&mut file).unwrap();
