@@ -15,13 +15,6 @@ use road::{RoadJunction, RoadSegment};
 
 
 fn main() {
-    let points = [
-        Point2::new(0.25, 0.25),
-        Point2::new(0.75, 0.25),
-        Point2::new(0.25, 0.75),
-        Point2::new(0.75, 0.75),
-    ];
-
     let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
     let cr = get_default_context(&surface).unwrap();
 

@@ -12,7 +12,8 @@ pub struct RoadJunction {
 }
 
 pub struct RoadSegment {
-    actors: Vec<Actor>,  // off-road only, otherwise they belong to lanes
+    /// off-road only, otherwise they belong to lanes
+    actors: Vec<Actor>,
     begin_junction: RoadJunction,
     end_junction: RoadJunction,
     // forward_lanes: Vec<RoadLane>,
