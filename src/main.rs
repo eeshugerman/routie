@@ -1,10 +1,14 @@
 extern crate cairo;
 extern crate nalgebra;
 
+mod actor;
+mod road;
+
 use std::{fs::File, f64::consts::PI};
 
 use cairo::{Context, Error, Format, ImageSurface};
 use nalgebra::{Vector2, Rotation2, Point2};
+
 
 static IMAGE_SIZE: i32 = 600;
 static I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
@@ -36,6 +40,7 @@ fn draw_regular_polygon(cr: &Context, pos: Point2<f64>, n: i8, r: f64) {
     }
     cr.line_to(start.x, start.y);
 }
+
 
 fn main() {
     let points = [
