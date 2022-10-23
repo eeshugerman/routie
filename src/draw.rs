@@ -44,7 +44,7 @@ pub trait Draw {
     fn draw(&self, cr: &Context) -> Result<(), Error>;
 }
 
-impl Draw for RoadJunction {
+impl Draw for RoadJunction<'_> {
     fn draw(&self, cr: &Context) -> Result<(), Error> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         cr.set_source_rgb(red, green, blue);
