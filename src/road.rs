@@ -1,23 +1,130 @@
-use std::collections::HashSet;
-
 use nalgebra::Point2;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::atomic,
+};
 
-use crate::actor::Actor;
+#[derive(Debug)]
+pub struct AlreadyLinkedError;
 
-pub struct RoadJunction<'a> {
-    pub pos: Point2<f64>,
-    // or HashSet? should order matter? Would probably want an ID...
-    // pub segments: HashSet<&'a RoadSegment<'a>>,
-    pub segments: Vec<&'a RoadSegment<'a>>,
-    // lane_inputs: HashTable<>,
-    // lane_outputs: HashTable<>
+#[derive(Debug)]
+pub struct InvalidIdError;
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct JunctionId(usize);
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct SegmentId(usize);
+
+pub struct Network {
+    id_source: atomic::AtomicUsize,
+    junctions: HashMap<JunctionId, Junction>,
+    segments: HashMap<SegmentId, Segment>,
+    junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
+    segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
 
-pub struct RoadSegment<'a> {
+impl Network {
+    pub fn new() -> Self {
+        Self {
+            id_source: atomic::AtomicUsize::new(0),
+            junctions: HashMap::new(),
+            segments: HashMap::new(),
+            junction_segments: HashMap::new(),
+            segment_junctions: HashMap::new(),
+        }
+    }
+
+    fn get_id(&self) -> usize {
+        // TODO: can probably relax ordering -- https://doc.rust-lang.org/nightly/nomicon/atomics.html
+        self.id_source.fetch_add(1, atomic::Ordering::SeqCst)
+    }
+
+    pub fn register_junction(&mut self, pos: Point2<f64>) -> JunctionId {
+        let id = JunctionId(self.get_id());
+        self.junctions.insert(id, Junction { id, pos });
+        id
+    }
+    pub fn register_segment(
+        &mut self,
+        forward_lanes: Vec<SegmentLane>,
+        backward_lanes: Vec<SegmentLane>,
+    ) -> SegmentId {
+        let id = SegmentId(self.get_id());
+        self.segments.insert(
+            id,
+            Segment {
+                id,
+                forward_lanes,
+                backward_lanes,
+            },
+        );
+        id
+    }
+    pub fn link(
+        &mut self,
+        segment: SegmentId,
+        begin_junction: JunctionId,
+        end_junction: JunctionId,
+    ) -> Result<(), AlreadyLinkedError> {
+        match self
+            .segment_junctions
+            .insert(segment, (begin_junction, end_junction))
+        {
+            None => Ok(()),
+            Some(existing_value) => Err(AlreadyLinkedError),
+        }
+    }
+    pub fn get_segment_junctions(
+        &self,
+        segment: SegmentId,
+    ) -> Result<(&Junction, &Junction), InvalidIdError> {
+        let ids_maybe = self.segment_junctions.get(&segment);
+        match ids_maybe {
+            None => Err(InvalidIdError),
+            Some((begin_id, end_id)) => {
+                match (self.junctions.get(begin_id), self.junctions.get(end_id)) {
+                    (Some(begin_junction), Some(end_junction)) => {
+                        Ok((begin_junction, end_junction))
+                    }
+                    (_, _) => Err(InvalidIdError),
+                }
+            }
+        }
+    }
+
+    pub fn junctions(&self) -> &HashMap<JunctionId, Junction> {
+        // TODO: maybe just return the `Junction`s in a Vec
+        &self.junctions
+    }
+
+    pub fn segments(&self) -> &HashMap<SegmentId, Segment> {
+        // TODO: maybe just return the `Segment`s in a Vec
+        &self.segments
+    }
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct Junction {
+    id: JunctionId,
+    pub pos: Point2<f64>,
+}
+
+pub struct Segment {
+    pub id: SegmentId,
     /// off-road only, otherwise they belong to lanes
     // actors: BTreeMap<PosParam, Actor>,
-    pub begin_junction: &'a RoadJunction<'a>,
-    pub end_junction: &'a RoadJunction<'a>,
-    // forward_lanes: Vec<RoadLane>,
-    // backward_lanes: Vec<RoadLane>
+    forward_lanes: Vec<SegmentLane>,
+    backward_lanes: Vec<SegmentLane>,
+    // pub begin_junction: &Junction,
+    // pub end_junction: &Junction,
+}
+
+pub struct SegmentLane {
+    //
 }
