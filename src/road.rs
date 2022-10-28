@@ -4,13 +4,8 @@ use std::{
     sync::atomic,
 };
 
-#[derive(Debug)]
-pub enum RoutieError {
-    AlreadyLinkedSegment,
-    InvalidId, // TODO: be more specific
-    UnlinkedSegment
-    // InternalError  // for things that should never happen
-}
+use crate::error::RoutieError;
+
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct JunctionId(usize);
@@ -69,22 +64,17 @@ impl Network {
         begin_junction: JunctionId,
         end_junction: JunctionId,
     ) -> Result<(), RoutieError> {
-        if !self
-            .junction_segments
-            .entry(begin_junction)
-            .or_insert(HashSet::new())
-            .insert(segment)
-        {
-            log::warn!("Segment loops! Is this what you want?");
-        };
-        if !self
-            .junction_segments
-            .entry(end_junction)
-            .or_insert(HashSet::new())
-            .insert(segment)
-        {
-            log::warn!("Segment loops! Is this what you want?");
-        };
+
+        for junction in [begin_junction, end_junction].iter() {
+            if !self
+                .junction_segments
+                .entry(*junction)
+                .or_insert(HashSet::new())
+                .insert(segment)
+            {
+                log::warn!("Segment loops! Is this what you want?");
+            };
+        }
 
         match self
             .segment_junctions

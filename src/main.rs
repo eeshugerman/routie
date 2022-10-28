@@ -1,6 +1,7 @@
 extern crate cairo;
 extern crate nalgebra;
 
+mod error;
 mod actor;
 mod draw;
 mod road;
@@ -36,7 +37,7 @@ fn main() {
     network.link(s4, j2, j4).unwrap();
 
     let artist = draw::Artist::new(&surface, &network);
-    artist.draw_road_network().unwrap();
+    artist.draw_road_network().expect("failed to draw road network");
 
     let mut file = File::create("file.png").unwrap();
     surface.write_to_png(&mut file).unwrap();
