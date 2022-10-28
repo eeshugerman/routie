@@ -5,10 +5,12 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct AlreadyLinkedError;
-
-#[derive(Debug)]
-pub struct InvalidIdError;
+pub enum RoutieError {
+    AlreadyLinkedSegment,
+    InvalidId, // TODO: be more specific
+    UnlinkedSegment
+    // InternalError  // for things that should never happen
+}
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct JunctionId(usize);
@@ -66,28 +68,45 @@ impl Network {
         segment: SegmentId,
         begin_junction: JunctionId,
         end_junction: JunctionId,
-    ) -> Result<(), AlreadyLinkedError> {
+    ) -> Result<(), RoutieError> {
+        if !self
+            .junction_segments
+            .entry(begin_junction)
+            .or_insert(HashSet::new())
+            .insert(segment)
+        {
+            log::warn!("Segment loops! Is this what you want?");
+        };
+        if !self
+            .junction_segments
+            .entry(end_junction)
+            .or_insert(HashSet::new())
+            .insert(segment)
+        {
+            log::warn!("Segment loops! Is this what you want?");
+        };
+
         match self
             .segment_junctions
             .insert(segment, (begin_junction, end_junction))
         {
+            Some(_) => Err(RoutieError::AlreadyLinkedSegment), // TODO: relink instead?
             None => Ok(()),
-            Some(existing_value) => Err(AlreadyLinkedError),
         }
     }
     pub fn get_segment_junctions(
         &self,
         segment: SegmentId,
-    ) -> Result<(&Junction, &Junction), InvalidIdError> {
+    ) -> Result<(&Junction, &Junction), RoutieError> {
         let ids_maybe = self.segment_junctions.get(&segment);
         match ids_maybe {
-            None => Err(InvalidIdError),
+            None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => {
                 match (self.junctions.get(begin_id), self.junctions.get(end_id)) {
                     (Some(begin_junction), Some(end_junction)) => {
                         Ok((begin_junction, end_junction))
                     }
-                    (_, _) => Err(InvalidIdError),
+                    (_, _) => Err(RoutieError::InvalidId),
                 }
             }
         }
