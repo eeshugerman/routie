@@ -113,12 +113,6 @@ impl Network {
     }
 }
 
-impl Default for Network {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub struct Junction {
     id: JunctionId,
     pub pos: Point2<f64>,
