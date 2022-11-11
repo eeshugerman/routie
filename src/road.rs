@@ -6,7 +6,6 @@ use std::{
 
 use crate::error::RoutieError;
 
-
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct JunctionId(usize);
 
@@ -15,8 +14,8 @@ pub struct SegmentId(usize);
 
 pub struct Network {
     id_source: atomic::AtomicUsize,
-    junctions: HashMap<JunctionId, Junction>,
-    segments: HashMap<SegmentId, Segment>,
+    junctions: HashMap<JunctionId, Junction>, // these two should maybe just be vectors
+    segments: HashMap<SegmentId, Segment>,    // then we wouldn't need `generate_id`
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
@@ -32,39 +31,33 @@ impl Network {
         }
     }
 
-    fn get_id(&self) -> usize {
+    fn generate_id(&self) -> usize {
         // TODO: can probably relax ordering -- https://doc.rust-lang.org/nightly/nomicon/atomics.html
         self.id_source.fetch_add(1, atomic::Ordering::SeqCst)
     }
 
-    pub fn register_junction(&mut self, pos: Point2<f64>) -> JunctionId {
-        let id = JunctionId(self.get_id());
+    pub fn add_junction(&mut self, pos: Point2<f64>) -> JunctionId {
+        let id = JunctionId(self.generate_id());
         self.junctions.insert(id, Junction { id, pos });
         id
     }
-    pub fn register_segment(
-        &mut self,
-        forward_lanes: Vec<SegmentLane>,
-        backward_lanes: Vec<SegmentLane>,
-    ) -> SegmentId {
-        let id = SegmentId(self.get_id());
+    fn add_segment(&mut self) -> SegmentId {
+        let id = SegmentId(self.generate_id());
         self.segments.insert(
             id,
             Segment {
                 id,
-                forward_lanes,
-                backward_lanes,
+                forward_lanes: vec![],
+                backward_lanes: vec![],
             },
         );
         id
     }
-    pub fn link(
-        &mut self,
-        segment: SegmentId,
-        begin_junction: JunctionId,
-        end_junction: JunctionId,
-    ) -> Result<(), RoutieError> {
-
+    pub fn connect_junctions(&mut self, begin_junction: JunctionId, end_junction: JunctionId) {
+        let segment = self.add_segment();
+        self.segment_junctions
+            .insert(segment, (begin_junction, end_junction))
+            .unwrap();
         for junction in [begin_junction, end_junction].iter() {
             if !self
                 .junction_segments
@@ -74,14 +67,6 @@ impl Network {
             {
                 log::warn!("Segment loops! Is this what you want?");
             };
-        }
-
-        match self
-            .segment_junctions
-            .insert(segment, (begin_junction, end_junction))
-        {
-            Some(_) => Err(RoutieError::AlreadyLinkedSegment), // TODO: relink instead?
-            None => Ok(()),
         }
     }
     pub fn get_segment_junctions(
