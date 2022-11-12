@@ -41,29 +41,22 @@ impl Network {
         self.junctions.insert(id, Junction { id, pos });
         id
     }
-    fn add_segment(&mut self) -> SegmentId {
+    pub fn add_segment(&mut self, begin_junction: JunctionId, end_junction: JunctionId) {
         let id = SegmentId(self.generate_id());
-        self.segments.insert(
+        let segment = Segment {
             id,
-            Segment {
-                id,
-                forward_lanes: vec![],
-                backward_lanes: vec![],
-            },
-        );
-        id
-    }
-    pub fn connect_junctions(&mut self, begin_junction: JunctionId, end_junction: JunctionId) {
-        let segment = self.add_segment();
+            forward_lanes: vec![],
+            backward_lanes: vec![],
+        };
+        self.segments.insert(id, segment);
         self.segment_junctions
-            .insert(segment, (begin_junction, end_junction))
-            .unwrap();
+            .insert(id, (begin_junction, end_junction));
         for junction in [begin_junction, end_junction].iter() {
             if !self
                 .junction_segments
                 .entry(*junction)
                 .or_insert(HashSet::new())
-                .insert(segment)
+                .insert(id)
             {
                 log::warn!("Segment loops! Is this what you want?");
             };
