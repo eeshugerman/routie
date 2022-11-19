@@ -1,16 +1,76 @@
 use nalgebra::Point2;
 use std::{
-    collections::{hash_map, HashMap, HashSet},
+    collections::{hash_map, BTreeMap, HashMap, HashSet},
     sync::atomic,
 };
 
 use crate::error::RoutieError;
+
+pub struct Actor {}
+
+pub struct PosParam(f64);
+
+pub enum Direction {
+    Forward,
+    Backward,
+}
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct JunctionId(usize);
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct SegmentId(usize);
+
+#[derive(Debug)]
+pub struct Junction {
+    id: JunctionId,
+    pub pos: Point2<f64>,
+}
+
+pub struct SegmentLane {
+    actors: BTreeMap<PosParam, Actor>,
+}
+
+impl SegmentLane {
+    pub fn new() -> Self {
+        Self {
+            actors: BTreeMap::new(),
+        }
+    }
+}
+
+pub struct Segment {
+    pub id: SegmentId,
+    /// off-road only, otherwise they belong to lanes
+    actors: BTreeMap<PosParam, Actor>,
+    forward_lanes: Vec<SegmentLane>,
+    backward_lanes: Vec<SegmentLane>,
+    // pub begin_junction: &Junction,
+    // pub end_junction: &Junction,
+}
+
+impl Segment {
+    pub fn new(id: SegmentId) -> Self {
+        Self {
+            id,
+            forward_lanes: vec![],
+            backward_lanes: vec![],
+            actors: BTreeMap::new(),
+        }
+    }
+    pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
+        match direction {
+            Direction::Forward => {
+                self.forward_lanes.push(SegmentLane::new());
+                self.forward_lanes.last_mut().unwrap()
+            }
+            Direction::Backward => {
+                self.backward_lanes.push(SegmentLane::new());
+                self.backward_lanes.last_mut().unwrap()
+            }
+        }
+    }
+}
 
 pub struct Network {
     id_source: atomic::AtomicUsize,
@@ -41,23 +101,11 @@ impl Network {
         self.junctions.insert(id, Junction { id, pos });
         id
     }
-    pub fn add_segment(
-        &mut self,
-        begin_junction: JunctionId,
-        end_junction: JunctionId,
-    ) -> &Segment {
+    pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> &mut Segment {
         let id = SegmentId(self.generate_id());
-        self.segments.insert(
-            id,
-            Segment {
-                id,
-                forward_lanes: vec![],
-                backward_lanes: vec![],
-            },
-        );
-        self.segment_junctions
-            .insert(id, (begin_junction, end_junction));
-        for junction in [begin_junction, end_junction].iter() {
+        self.segments.insert(id, Segment::new(id));
+        self.segment_junctions.insert(id, (begin_id, end_id));
+        for junction in [begin_id, end_id].iter() {
             if !self
                 .junction_segments
                 .entry(*junction)
@@ -67,7 +115,7 @@ impl Network {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
-        self.segments.get(&id).unwrap()
+        self.segments.get_mut(&id).unwrap()
     }
 
     pub fn get_junctions(&self) -> hash_map::Values<JunctionId, Junction> {
@@ -87,32 +135,10 @@ impl Network {
             None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => {
                 match (self.junctions.get(begin_id), self.junctions.get(end_id)) {
-                    (Some(begin_junction), Some(end_junction)) => {
-                        Ok((begin_junction, end_junction))
-                    }
+                    (Some(begin), Some(end)) => Ok((begin, end)),
                     (_, _) => Err(RoutieError::InvalidId),
                 }
             }
         }
     }
-}
-
-#[derive(Debug)]
-pub struct Junction {
-    id: JunctionId,
-    pub pos: Point2<f64>,
-}
-
-pub struct Segment {
-    pub id: SegmentId,
-    /// off-road only, otherwise they belong to lanes
-    // actors: BTreeMap<PosParam, Actor>,
-    forward_lanes: Vec<SegmentLane>,
-    backward_lanes: Vec<SegmentLane>,
-    // pub begin_junction: &Junction,
-    // pub end_junction: &Junction,
-}
-
-pub struct SegmentLane {
-    //
 }

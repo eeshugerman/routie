@@ -25,11 +25,14 @@ fn main() {
     let j3 = network.add_junction(Point2::new(0.75, 0.25));
     let j4 = network.add_junction(Point2::new(0.75, 0.75));
 
-    network.add_segment(j1, j2);
-    network.add_segment(j3, j4);
+    let s1 = network.add_segment(j1, j2);
+    let l1 = s1.add_lane(road::Direction::Backward);
+    let l2 = s1.add_lane(road::Direction::Forward);
 
-    network.add_segment(j1, j3);
-    network.add_segment(j2, j4);
+    let s2 = network.add_segment(j3, j4);
+    let s3 = network.add_segment(j1, j3);
+    let s4 = network.add_segment(j2, j4);
+
 
     let artist = draw::Artist::new(&surface, &network);
     artist.draw_road_network().expect("failed to draw road network");
