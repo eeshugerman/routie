@@ -31,14 +31,6 @@ pub struct SegmentLane {
     actors: BTreeMap<PosParam, Actor>,
 }
 
-impl SegmentLane {
-    pub fn new() -> Self {
-        Self {
-            actors: BTreeMap::new(),
-        }
-    }
-}
-
 pub struct Segment {
     pub id: SegmentId,
     /// off-road only, otherwise they belong to lanes
@@ -47,6 +39,14 @@ pub struct Segment {
     backward_lanes: Vec<SegmentLane>,
     // pub begin_junction: &Junction,
     // pub end_junction: &Junction,
+}
+
+pub struct Network {
+    id_source: atomic::AtomicUsize,
+    junctions: HashMap<JunctionId, Junction>, // these two should maybe just be vectors
+    segments: HashMap<SegmentId, Segment>,    // then we wouldn't need `generate_id`
+    junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
+    segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
 
 impl Segment {
@@ -68,13 +68,14 @@ impl Segment {
     }
 }
 
-pub struct Network {
-    id_source: atomic::AtomicUsize,
-    junctions: HashMap<JunctionId, Junction>, // these two should maybe just be vectors
-    segments: HashMap<SegmentId, Segment>,    // then we wouldn't need `generate_id`
-    junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
-    segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
+impl SegmentLane {
+    pub fn new() -> Self {
+        Self {
+            actors: BTreeMap::new(),
+        }
+    }
 }
+
 
 impl Network {
     pub fn new() -> Self {
@@ -122,6 +123,8 @@ impl Network {
         self.segments.values()
     }
 
+    // TODO: would it be possible to make this a method of `Segment`? `Segment`
+    // would need to hold an immutable reference to the `Network`.
     pub fn get_segment_junctions(
         &self,
         segment: &Segment,
@@ -138,3 +141,4 @@ impl Network {
         }
     }
 }
+
