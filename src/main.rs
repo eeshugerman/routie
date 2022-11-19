@@ -35,7 +35,7 @@ fn main() {
 
 
     let artist = draw::Artist::new(&surface, &network);
-    artist.draw_road_network().expect("failed to draw road network");
+    artist.draw_road_network().unwrap();
 
     let mut file = File::create("file.png").unwrap();
     surface.write_to_png(&mut file).unwrap();

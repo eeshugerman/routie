@@ -59,16 +59,12 @@ impl Segment {
         }
     }
     pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
-        match direction {
-            Direction::Forward => {
-                self.forward_lanes.push(SegmentLane::new());
-                self.forward_lanes.last_mut().unwrap()
-            }
-            Direction::Backward => {
-                self.backward_lanes.push(SegmentLane::new());
-                self.backward_lanes.last_mut().unwrap()
-            }
-        }
+        let lanes = match direction {
+            Direction::Forward => &mut self.forward_lanes,
+            Direction::Backward => &mut self.backward_lanes,
+        };
+        lanes.push(SegmentLane::new());
+        lanes.last_mut().unwrap()
     }
 }
 
