@@ -14,57 +14,9 @@ const ROAD_JUNCTION_COLOR: (f64, f64, f64) = (0.7, 0.7, 0.7);
 const ROAD_SEGMENT_WIDTH: f64 = 0.05;
 const ROAD_SEGMENT_COLOR: (f64, f64, f64) = (1.0, 1.0, 1.0);
 
-fn draw_polylines<const N: usize>(cr: &Context, points: [Point2<f64>; N]) {
-    cr.move_to(points[0].x, points[0].y);
-    for point in &points[1..] {
-        cr.line_to(point.x, point.y);
-    }
-    cr.line_to(points[0].x, points[0].y);
-}
-
-fn draw_regular_polygon(cr: &Context, pos: Point2<f64>, n: i8, r: f64, theta_0: f64) {
-    let start = pos + r * Rotation2::new(theta_0).matrix() * I_HAT;
-    cr.move_to(start.x, start.y);
-    for x in 1..n {
-        let theta = theta_0 + (x as f64 / n as f64) * 2.0 * PI;
-        let point = pos + r * Rotation2::new(theta).matrix() * I_HAT;
-        cr.line_to(point.x, point.y);
-    }
-    cr.line_to(start.x, start.y);
-}
-
-pub trait Draw {
-    fn draw(&self, cr: &Context, network: &road::Network) -> Result<(), GenericError>;
-}
-
 pub struct Artist<'a> {
     road_network: &'a road::Network,
     cairo_ctx: Context,
-}
-
-impl Draw for road::Junction {
-    fn draw(&self, cr: &Context, _network: &road::Network) -> Result<(), GenericError> {
-        let (red, green, blue) = ROAD_JUNCTION_COLOR;
-        cr.set_source_rgb(red, green, blue);
-        draw_regular_polygon(cr, self.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
-        cr.fill()?;
-        Ok(())
-    }
-}
-
-impl Draw for road::Segment {
-    fn draw(&self, cr: &Context, network: &road::Network) -> Result<(), GenericError> {
-        let (red, green, blue) = ROAD_SEGMENT_COLOR;
-        cr.set_source_rgb(red, green, blue);
-        cr.set_line_width(ROAD_SEGMENT_WIDTH);
-        let (begin_junction, end_junction) = network
-            .get_segment_junctions(self)
-            .map_err(|_| RoutieError::UnlinkedSegment)?;
-        cr.move_to(begin_junction.pos.x, begin_junction.pos.y);
-        cr.line_to(end_junction.pos.x, end_junction.pos.y);
-        cr.stroke()?;
-        Ok(())
-    }
 }
 
 impl Artist<'_> {
@@ -79,13 +31,54 @@ impl Artist<'_> {
         }
     }
 
+    fn draw_polylines<const N: usize>(&self, points: [Point2<f64>; N]) {
+        self.cairo_ctx.move_to(points[0].x, points[0].y);
+        for point in &points[1..] {
+            self.cairo_ctx.line_to(point.x, point.y);
+        }
+        self.cairo_ctx.line_to(points[0].x, points[0].y);
+    }
+
+    fn draw_regular_polygon(&self, pos: Point2<f64>, n: i8, r: f64, theta_0: f64) {
+        let start = pos + r * Rotation2::new(theta_0).matrix() * I_HAT;
+        self.cairo_ctx.move_to(start.x, start.y);
+        for x in 1..n {
+            let theta = theta_0 + (x as f64 / n as f64) * 2.0 * PI;
+            let point = pos + r * Rotation2::new(theta).matrix() * I_HAT;
+            self.cairo_ctx.line_to(point.x, point.y);
+        }
+        self.cairo_ctx.line_to(start.x, start.y);
+    }
+
+    fn draw_road_junction(&self, junction: &road::Junction) -> Result<(), GenericError> {
+        let (red, green, blue) = ROAD_JUNCTION_COLOR;
+        self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.draw_regular_polygon(junction.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
+        self.cairo_ctx.fill()?;
+        Ok(())
+    }
+
+    fn draw_road_segment(&self, segment: &road::Segment) -> Result<(), GenericError> {
+        let (red, green, blue) = ROAD_SEGMENT_COLOR;
+        self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.cairo_ctx.set_line_width(ROAD_SEGMENT_WIDTH);
+        let (begin_junction, end_junction) = self.road_network
+            .get_segment_junctions(segment)
+            .map_err(|_| RoutieError::UnlinkedSegment)?;
+        self.cairo_ctx.move_to(begin_junction.pos.x, begin_junction.pos.y);
+        self.cairo_ctx.line_to(end_junction.pos.x, end_junction.pos.y);
+        self.cairo_ctx.stroke()?;
+        Ok(())
+    }
+
     pub fn draw_road_network(&self) -> Result<(), GenericError> {
         for segment in self.road_network.get_segments() {
-            segment.draw(&self.cairo_ctx, self.road_network)?;
+            self.draw_road_segment(segment)?;
         }
         for junction in self.road_network.get_junctions() {
-            junction.draw(&self.cairo_ctx, self.road_network)?;
+            self.draw_road_junction(junction)?;
         }
+        // self.road_network.get_junctions().for_each(self.draw_road_junction)
         Ok(())
     }
 }

@@ -129,8 +129,7 @@ impl Network {
         &self,
         segment: &Segment,
     ) -> Result<(&Junction, &Junction), RoutieError> {
-        let ids_maybe = self.segment_junctions.get(&segment.id);
-        match ids_maybe {
+        match self.segment_junctions.get(&segment.id) {
             None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => {
                 match (self.junctions.get(begin_id), self.junctions.get(end_id)) {
