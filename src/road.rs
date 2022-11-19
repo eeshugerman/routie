@@ -1,15 +1,15 @@
 use nalgebra::Point2;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map, HashMap, HashSet},
     sync::atomic,
 };
 
 use crate::error::RoutieError;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct JunctionId(usize);
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct SegmentId(usize);
 
 pub struct Network {
@@ -41,14 +41,20 @@ impl Network {
         self.junctions.insert(id, Junction { id, pos });
         id
     }
-    pub fn add_segment(&mut self, begin_junction: JunctionId, end_junction: JunctionId) {
+    pub fn add_segment(
+        &mut self,
+        begin_junction: JunctionId,
+        end_junction: JunctionId,
+    ) -> &Segment {
         let id = SegmentId(self.generate_id());
-        let segment = Segment {
+        self.segments.insert(
             id,
-            forward_lanes: vec![],
-            backward_lanes: vec![],
-        };
-        self.segments.insert(id, segment);
+            Segment {
+                id,
+                forward_lanes: vec![],
+                backward_lanes: vec![],
+            },
+        );
         self.segment_junctions
             .insert(id, (begin_junction, end_junction));
         for junction in [begin_junction, end_junction].iter() {
@@ -61,12 +67,22 @@ impl Network {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
+        self.segments.get(&id).unwrap()
     }
+
+    pub fn get_junctions(&self) -> hash_map::Values<JunctionId, Junction> {
+        self.junctions.values()
+    }
+
+    pub fn get_segments(&self) -> hash_map::Values<SegmentId, Segment> {
+        self.segments.values()
+    }
+
     pub fn get_segment_junctions(
         &self,
-        segment: SegmentId,
+        segment: &Segment,
     ) -> Result<(&Junction, &Junction), RoutieError> {
-        let ids_maybe = self.segment_junctions.get(&segment);
+        let ids_maybe = self.segment_junctions.get(&segment.id);
         match ids_maybe {
             None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => {
@@ -79,18 +95,9 @@ impl Network {
             }
         }
     }
-
-    pub fn junctions(&self) -> &HashMap<JunctionId, Junction> {
-        // TODO: maybe just return the `Junction`s in a Vec
-        &self.junctions
-    }
-
-    pub fn segments(&self) -> &HashMap<SegmentId, Segment> {
-        // TODO: maybe just return the `Segment`s in a Vec
-        &self.segments
-    }
 }
 
+#[derive(Debug)]
 pub struct Junction {
     id: JunctionId,
     pub pos: Point2<f64>,

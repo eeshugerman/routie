@@ -58,7 +58,7 @@ impl Draw for road::Segment {
         cr.set_source_rgb(red, green, blue);
         cr.set_line_width(ROAD_SEGMENT_WIDTH);
         let (begin_junction, end_junction) = network
-            .get_segment_junctions(self.id)
+            .get_segment_junctions(self)
             .map_err(|_| RoutieError::UnlinkedSegment)?;
         cr.move_to(begin_junction.pos.x, begin_junction.pos.y);
         cr.line_to(end_junction.pos.x, end_junction.pos.y);
@@ -80,10 +80,10 @@ impl Artist<'_> {
     }
 
     pub fn draw_road_network(&self) -> Result<(), GenericError> {
-        for (_, segment) in self.road_network.segments() {
+        for segment in self.road_network.get_segments() {
             segment.draw(&self.cairo_ctx, self.road_network)?;
         }
-        for (_, junction) in self.road_network.junctions() {
+        for junction in self.road_network.get_junctions() {
             junction.draw(&self.cairo_ctx, self.road_network)?;
         }
         Ok(())
