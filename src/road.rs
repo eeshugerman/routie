@@ -1,15 +1,17 @@
-use nalgebra::Point2;
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet},
     sync::atomic,
 };
 
-use crate::error::RoutieError;
+use crate::{error::RoutieError, spatial::{Pos}};
 
+#[derive(Debug)]
 pub struct Actor {}
 
+#[derive(Debug)]
 pub struct PosParam(f64);
 
+#[derive(Debug)]
 pub enum Direction {
     Forward,
     Backward,
@@ -24,19 +26,23 @@ pub struct SegmentId(usize);
 #[derive(Debug)]
 pub struct Junction {
     id: JunctionId,
-    pub pos: Point2<f64>,
+    pub pos: Pos,
 }
 
+#[derive(Debug)]
 pub struct SegmentLane {
     actors: BTreeMap<PosParam, Actor>,
+    pub direction: Direction,
+    pub rank: usize
 }
 
+#[derive(Debug)]
 pub struct Segment {
     pub id: SegmentId,
     /// off-road only, otherwise they belong to lanes
-    actors: BTreeMap<PosParam, Actor>,
-    forward_lanes: Vec<SegmentLane>,
-    backward_lanes: Vec<SegmentLane>,
+    pub actors: BTreeMap<PosParam, Actor>,
+    pub forward_lanes: Vec<SegmentLane>,
+    pub backward_lanes: Vec<SegmentLane>,
     // pub begin_junction: &Junction,
     // pub end_junction: &Junction,
 }
@@ -63,14 +69,16 @@ impl Segment {
             Direction::Forward => &mut self.forward_lanes,
             Direction::Backward => &mut self.backward_lanes,
         };
-        lanes.push(SegmentLane::new());
+        lanes.push(SegmentLane::new(direction, lanes.len()));
         lanes.last_mut().unwrap()
     }
 }
 
 impl SegmentLane {
-    pub fn new() -> Self {
+    pub fn new(direction: Direction, rank: usize) -> Self {
         Self {
+            direction,
+            rank,
             actors: BTreeMap::new(),
         }
     }
@@ -93,7 +101,7 @@ impl Network {
         self.id_source.fetch_add(1, atomic::Ordering::SeqCst)
     }
 
-    pub fn add_junction(&mut self, pos: Point2<f64>) -> JunctionId {
+    pub fn add_junction(&mut self, pos: Pos) -> JunctionId {
         let id = JunctionId(self.generate_id());
         self.junctions.insert(id, Junction { id, pos });
         id

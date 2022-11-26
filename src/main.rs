@@ -5,6 +5,7 @@ mod error;
 mod actor;
 mod draw;
 mod road;
+mod spatial;
 
 
 use std::fs::File;

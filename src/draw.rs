@@ -3,8 +3,9 @@ use std::f64::consts::{FRAC_PI_4, PI};
 use cairo::{Context, ImageSurface};
 use nalgebra::{Point2, Rotation2, Vector2};
 
+use crate::error::GenericError;
 use crate::road;
-use crate::error::{RoutieError,CairoError,GenericError};
+use crate::spatial::{located, LineLike};
 
 pub const IMAGE_SIZE: i32 = 600;
 const I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
@@ -58,22 +59,48 @@ impl Artist<'_> {
         Ok(())
     }
 
-    fn draw_road_segment(&self, segment: &road::Segment) -> Result<(), GenericError> {
+    fn draw_road_segment_lane(
+        &self,
+        located_lane: &located::SegmentLane,
+        direction: road::Direction
+    ) -> Result<(), GenericError> {
+
+        let (begin_pos, end_pos) = located_lane.get_pos();
+        self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
+        self.cairo_ctx.line_to(end_pos.x, end_pos.y);
+        self.cairo_ctx.stroke()?;
+        Ok(())
+    }
+
+    fn draw_road_segment(&self, located_segment: &located::Segment) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_SEGMENT_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(ROAD_SEGMENT_WIDTH);
-        let (begin_junction, end_junction) = self.road_network
-            .get_segment_junctions(segment)
-            .map_err(|_| RoutieError::UnlinkedSegment)?;
-        self.cairo_ctx.move_to(begin_junction.pos.x, begin_junction.pos.y);
-        self.cairo_ctx.line_to(end_junction.pos.x, end_junction.pos.y);
+
+        let (begin_pos, end_pos) = located_segment.get_pos();
+        self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
+        self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke()?;
+
+        let located::Segment(_, segment) = located_segment;
+        for lane in segment.forward_lanes {
+            self.draw_road_segment_lane(
+                &located::SegmentLane(located_segment, &lane),
+                road::Direction::Forward,
+            )?
+        }
+        for lane in segment.backward_lanes {
+            self.draw_road_segment_lane(
+                &located::SegmentLane(located_segment, &lane),
+                road::Direction::Backward
+            )?
+        }
         Ok(())
     }
 
     pub fn draw_road_network(&self) -> Result<(), GenericError> {
         for segment in self.road_network.get_segments() {
-            self.draw_road_segment(segment)?;
+            self.draw_road_segment(&located::Segment(self.road_network, segment))?;
         }
         for junction in self.road_network.get_junctions() {
             self.draw_road_junction(junction)?;
