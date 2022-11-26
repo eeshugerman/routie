@@ -6,9 +6,8 @@ use nalgebra::{Point2, Rotation2, Vector2};
 use crate::constants::ROAD_JUNCTION_COLOR;
 use crate::constants::ROAD_JUNCTION_RADIUS;
 use crate::constants::ROAD_LANE_COLOR;
-use crate::constants::ROAD_LANE_WIDTH;
+use crate::constants::ROAD_LANE_WIDTH_VISUAL;
 use crate::constants::ROAD_SEGMENT_COLOR;
-use crate::constants::ROAD_SEGMENT_WIDTH;
 use crate::error::GenericError;
 use crate::road;
 use crate::spatial::{located, LineLike};
@@ -66,7 +65,7 @@ impl Artist<'_> {
     ) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH);
+        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
 
         let (begin_pos, end_pos) = located_lane.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
@@ -78,7 +77,7 @@ impl Artist<'_> {
     fn draw_road_segment(&self, located_segment: &located::Segment) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_SEGMENT_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(ROAD_SEGMENT_WIDTH);
+        self.cairo_ctx.set_line_width(located_segment.get_width());
 
         let (begin_pos, end_pos) = located_segment.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);

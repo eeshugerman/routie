@@ -2,7 +2,11 @@ use std::f64::consts::FRAC_PI_2;
 
 use nalgebra::{Point2, Rotation2, Vector2};
 
-use crate::{constants::ROAD_LANE_WIDTH, error::RoutieError, road::Direction};
+use crate::{
+    constants::{ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
+    error::RoutieError,
+    road::Direction,
+};
 
 pub type Pos = Point2<f64>;
 pub type Vector = Vector2<f64>;
@@ -24,16 +28,15 @@ pub trait PointLike {
 }
 
 pub trait LineLike {
+    fn get_width(&self) -> f64;
     fn get_pos(&self) -> (Pos, Pos);
     fn get_v_norm(&self) -> Vector {
         let (begin_pos, end_pos) = self.get_pos();
-        end_pos - begin_pos
+        (end_pos - begin_pos).normalize()
     }
     fn get_v_ortho(&self) -> Vector {
-        let (begin_pos, end_pos) = self.get_pos();
-        let vec = (end_pos - begin_pos).normalize();
         let rot = Rotation2::new(FRAC_PI_2);
-        return rot * vec;
+        return rot * self.get_v_norm();
     }
 }
 
@@ -45,6 +48,14 @@ impl<'a> PointLike for located::Junction<'a> {
 }
 
 impl<'a> LineLike for located::Segment<'a> {
+    fn get_width(&self) -> f64 {
+        let located::Segment(_, segment) = self;
+        let total_lane_count = segment.forward_lanes.len() +segment.backward_lanes.len();
+        (1.0 + (ROAD_SEGMENT_WIGGLE_ROOM_PCT as f64 / 100.0))
+            * ROAD_LANE_WIDTH
+            * std::cmp::max(total_lane_count, 1) as f64
+    }
+
     fn get_pos(&self) -> (Pos, Pos) {
         let located::Segment(network, segment) = self;
         let (begin_junction, end_junction) = network
@@ -54,6 +65,9 @@ impl<'a> LineLike for located::Segment<'a> {
     }
 }
 impl<'a> LineLike for located::SegmentLane<'a> {
+    fn get_width(&self) -> f64 {
+        ROAD_LANE_WIDTH
+    }
     fn get_v_norm(&self) -> Vector {
         let located::SegmentLane(_, lane) = self;
         let (segment_begin_pos, segment_end_pos) = self.get_pos();
@@ -75,13 +89,14 @@ impl<'a> LineLike for located::SegmentLane<'a> {
                 * ROAD_LANE_WIDTH
                 * (segment.backward_lanes.len() + segment.forward_lanes.len()) as f64
                 * v_ortho;
-            let v_lane_edge = v_segment_edge
-                + (lane_count_from_edge as f64 * ROAD_LANE_WIDTH * v_ortho);
+            let v_lane_edge =
+                v_segment_edge + (lane_count_from_edge as f64 * ROAD_LANE_WIDTH * v_ortho);
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
+        log::debug!("v_offset = {:?}", v_offset);
         match lane.direction {
             Direction::Backward => (segment_end_pos + v_offset, segment_begin_pos + v_offset),
-            Direction::Forward => (segment_begin_pos + v_offset, segment_end_pos + v_offset)
+            Direction::Forward => (segment_begin_pos + v_offset, segment_end_pos + v_offset),
         }
     }
 }
