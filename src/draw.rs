@@ -3,17 +3,18 @@ use std::f64::consts::{FRAC_PI_4, PI};
 use cairo::{Context, ImageSurface};
 use nalgebra::{Point2, Rotation2, Vector2};
 
+use crate::constants::ROAD_JUNCTION_COLOR;
+use crate::constants::ROAD_JUNCTION_RADIUS;
+use crate::constants::ROAD_LANE_COLOR;
+use crate::constants::ROAD_LANE_WIDTH;
+use crate::constants::ROAD_SEGMENT_COLOR;
+use crate::constants::ROAD_SEGMENT_WIDTH;
 use crate::error::GenericError;
 use crate::road;
 use crate::spatial::{located, LineLike};
 
 pub const IMAGE_SIZE: i32 = 600;
 const I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
-
-const ROAD_JUNCTION_RADIUS: f64 = 0.05;
-const ROAD_JUNCTION_COLOR: (f64, f64, f64) = (0.7, 0.7, 0.7);
-const ROAD_SEGMENT_WIDTH: f64 = 0.05;
-const ROAD_SEGMENT_COLOR: (f64, f64, f64) = (1.0, 1.0, 1.0);
 
 pub struct Artist<'a> {
     road_network: &'a road::Network,
@@ -62,8 +63,10 @@ impl Artist<'_> {
     fn draw_road_segment_lane(
         &self,
         located_lane: &located::SegmentLane,
-        direction: road::Direction
     ) -> Result<(), GenericError> {
+        let (red, green, blue) = ROAD_LANE_COLOR;
+        self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH);
 
         let (begin_pos, end_pos) = located_lane.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
@@ -83,17 +86,11 @@ impl Artist<'_> {
         self.cairo_ctx.stroke()?;
 
         let located::Segment(_, segment) = located_segment;
-        for lane in segment.forward_lanes {
-            self.draw_road_segment_lane(
-                &located::SegmentLane(located_segment, &lane),
-                road::Direction::Forward,
-            )?
+        for lane in &segment.forward_lanes {
+            self.draw_road_segment_lane(&located::SegmentLane(located_segment, &lane))?
         }
-        for lane in segment.backward_lanes {
-            self.draw_road_segment_lane(
-                &located::SegmentLane(located_segment, &lane),
-                road::Direction::Backward
-            )?
+        for lane in &segment.backward_lanes {
+            self.draw_road_segment_lane(&located::SegmentLane(located_segment, &lane))?
         }
         Ok(())
     }

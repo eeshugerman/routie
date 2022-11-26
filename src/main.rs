@@ -1,6 +1,7 @@
 extern crate cairo;
 extern crate nalgebra;
 
+mod constants;
 mod error;
 mod actor;
 mod draw;
