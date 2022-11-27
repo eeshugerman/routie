@@ -4,16 +4,18 @@ use std::f64::consts::{FRAC_PI_4, PI};
 use cairo::{Context, ImageSurface};
 use nalgebra::{Point2, Rotation2, Vector2};
 
-use crate::constants::FILLED_SHAPE_BORDER_WIDTH;
-use crate::constants::ROAD_JUNCTION_COLOR;
-use crate::constants::ROAD_JUNCTION_RADIUS;
-use crate::constants::ROAD_LANE_ARROW_SIZE;
-use crate::constants::ROAD_LANE_COLOR;
-use crate::constants::ROAD_LANE_WIDTH_VISUAL;
-use crate::constants::ROAD_SEGMENT_COLOR;
+use crate::constants::{
+    FILLED_SHAPE_BORDER_WIDTH,
+    ROAD_JUNCTION_COLOR,
+    ROAD_JUNCTION_RADIUS,
+    ROAD_LANE_ARROW_SIZE,
+    ROAD_LANE_COLOR,
+    ROAD_LANE_WIDTH_VISUAL,
+    ROAD_SEGMENT_COLOR,
+};
 use crate::error::GenericError;
-use crate::road;
-use crate::spatial::{located, LineLike};
+use crate::road::{self, context};
+use crate::spatial::LineLike;
 
 pub const IMAGE_SIZE: i32 = 600;
 const I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
@@ -54,58 +56,58 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(start.x, start.y);
     }
 
-    fn draw_road_junction(&self, junction: &located::Junction) -> Result<(), GenericError> {
+    fn draw_road_junction(&self, ctx: &context::Junction) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        self.draw_regular_polygon(junction.itself.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
+        self.draw_regular_polygon(ctx.junction.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
         self.cairo_ctx.fill()?;
         Ok(())
     }
 
-    fn draw_road_segment_lane(&self, lane: &located::SegmentLane) -> Result<(), GenericError> {
+    fn draw_road_segment_lane(&self, ctx: &context::SegmentLane) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
 
         self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
-        let (begin_pos, end_pos) = lane.get_pos();
+        let (begin_pos, end_pos) = ctx.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke()?;
 
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        let vec = lane.get_v(); // can't figure out how to destructure this
+        let vec = ctx.get_v(); // can't figure out how to destructure this
         let theta = FRAC_PI_2 - vec.x.atan2(vec.y);
-        self.draw_regular_polygon(lane.get_midpoint(), 3, ROAD_LANE_ARROW_SIZE, theta);
+        self.draw_regular_polygon(ctx.get_midpoint(), 3, ROAD_LANE_ARROW_SIZE, theta);
         self.cairo_ctx.fill()?;
         Ok(())
     }
 
-    fn draw_road_segment(&self, segment: &located::Segment) -> Result<(), GenericError> {
+    fn draw_road_segment(&self, ctx: &context::Segment) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_SEGMENT_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(segment.get_width());
+        self.cairo_ctx.set_line_width(ctx.get_width());
 
-        let (begin_pos, end_pos) = segment.get_pos();
+        let (begin_pos, end_pos) = ctx.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke()?;
 
-        for lane in &segment.itself.forward_lanes {
-            self.draw_road_segment_lane(&located::SegmentLane::new(segment, &lane))?
+        for lane in &ctx.segment.forward_lanes {
+            self.draw_road_segment_lane(&context::SegmentLane::new(ctx, lane))?
         }
-        for lane in &segment.itself.backward_lanes {
-            self.draw_road_segment_lane(&located::SegmentLane::new(segment, &lane))?
+        for lane in &ctx.segment.backward_lanes {
+            self.draw_road_segment_lane(&context::SegmentLane::new(ctx, lane))?
         }
         Ok(())
     }
 
     pub fn draw_road_network(&self) -> Result<(), GenericError> {
         for segment in self.road_network.get_segments() {
-            self.draw_road_segment(&located::Segment::new(self.road_network, segment))?;
+            self.draw_road_segment(&context::Segment::new(self.road_network, segment))?;
         }
         for junction in self.road_network.get_junctions() {
-            self.draw_road_junction(&located::Junction::new(self.road_network, junction))?;
+            self.draw_road_junction(&context::Junction::new(self.road_network, junction))?;
         }
         // self.road_network.get_junctions().for_each(self.draw_road_junction)
         Ok(())

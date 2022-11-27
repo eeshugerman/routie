@@ -144,3 +144,35 @@ impl Network {
         }
     }
 }
+
+pub mod context {
+    use crate::road;
+    pub struct Junction<'a> {
+        pub network: &'a road::Network,
+        pub junction: &'a road::Junction,
+    }
+    pub struct Segment<'a> {
+        pub network: &'a road::Network,
+        pub segment: &'a road::Segment,
+    }
+    pub struct SegmentLane<'a> {
+        pub segment: &'a Segment<'a>,
+        pub lane: &'a road::SegmentLane,
+    }
+
+    impl<'a> Junction<'a> {
+        pub fn new(network: &'a road::Network, junction: &'a road::Junction) -> Self {
+            Self { network, junction }
+        }
+    }
+    impl<'a> Segment<'a> {
+        pub fn new(network: &'a road::Network, segment: &'a road::Segment) -> Self {
+            Self { network, segment }
+        }
+    }
+    impl<'a> SegmentLane<'a> {
+        pub fn new(segment: &'a Segment<'a>, lane: &'a road::SegmentLane) -> Self {
+            Self { segment, lane }
+        }
+    }
+}
