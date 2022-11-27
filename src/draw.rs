@@ -55,7 +55,7 @@ impl Artist<'_> {
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
         self.draw_regular_polygon(
-            junction_ctx.junction.pos,
+            junction_ctx.itself.pos,
             4,
             ROAD_JUNCTION_RADIUS,
             FRAC_PI_4,
@@ -90,10 +90,10 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke().unwrap();
 
-        for lane in &segment_ctx.segment.forward_lanes {
+        for lane in &segment_ctx.itself.forward_lanes {
             self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, lane));
         }
-        for lane in &segment_ctx.segment.backward_lanes {
+        for lane in &segment_ctx.itself.backward_lanes {
             self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, lane));
         }
     }

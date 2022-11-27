@@ -16,7 +16,7 @@ pub trait PointLike {
 
 impl<'a> PointLike for context::Junction<'a> {
     fn get_pos(&self) -> Pos {
-        self.junction.pos
+        self.itself.pos
     }
 }
 
@@ -41,7 +41,7 @@ pub trait LineLike {
 
 impl<'a> LineLike for context::Segment<'a> {
     fn get_width(&self) -> f64 {
-        let total_lane_count = self.segment.forward_lanes.len() + self.segment.backward_lanes.len();
+        let total_lane_count = self.itself.forward_lanes.len() + self.itself.backward_lanes.len();
         (1.0 + (ROAD_SEGMENT_WIGGLE_ROOM_PCT as f64 / 100.0))
             * ROAD_LANE_WIDTH
             * std::cmp::max(total_lane_count, 1) as f64
@@ -50,8 +50,8 @@ impl<'a> LineLike for context::Segment<'a> {
     fn get_pos(&self) -> (Pos, Pos) {
         let (begin_junction, end_junction) = self
             .network
-            .get_segment_junctions(self.segment)
-            .expect(format!("Unlinked segment {:?}", self.segment.id).as_str());
+            .get_segment_junctions(self.itself)
+            .expect(format!("Unlinked segment {:?}", self.itself.id).as_str());
         (begin_junction.pos, end_junction.pos)
     }
 }
@@ -61,7 +61,7 @@ impl<'a> LineLike for context::SegmentLane<'a> {
         ROAD_LANE_WIDTH
     }
     fn get_v(&self) -> Vector {
-        let rot = Rotation2::new(match self.lane.direction {
+        let rot = Rotation2::new(match self.itself.direction {
             Backward => PI,
             Forward => 0.0,
         });
@@ -70,21 +70,21 @@ impl<'a> LineLike for context::SegmentLane<'a> {
     fn get_pos(&self) -> (Pos, Pos) {
         let (segment_begin_pos, segment_end_pos) = self.segment.get_pos();
         let v_offset = {
-            let lane_count_from_edge = match self.lane.direction {
-                Backward => self.segment.segment.backward_lanes.len() - self.lane.rank - 1,
-                Forward => self.segment.segment.backward_lanes.len() + self.lane.rank,
+            let lane_count_from_edge = match self.itself.direction {
+                Backward => self.segment.itself.backward_lanes.len() - self.itself.rank - 1,
+                Forward => self.segment.itself.backward_lanes.len() + self.itself.rank,
             };
             let v_ortho = self.segment.get_v_ortho();
             let v_segment_edge = (-0.5)
                 * ROAD_LANE_WIDTH
-                * (self.segment.segment.backward_lanes.len()
-                    + self.segment.segment.forward_lanes.len()) as f64
+                * (self.segment.itself.backward_lanes.len()
+                    + self.segment.itself.forward_lanes.len()) as f64
                 * v_ortho;
             let v_lane_edge =
                 v_segment_edge + (lane_count_from_edge as f64 * ROAD_LANE_WIDTH * v_ortho);
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
-        match self.lane.direction {
+        match self.itself.direction {
             Backward => (segment_end_pos + v_offset, segment_begin_pos + v_offset),
             Forward => (segment_begin_pos + v_offset, segment_end_pos + v_offset),
         }
