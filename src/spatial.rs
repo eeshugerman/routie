@@ -50,8 +50,8 @@ impl<'a> LineLike for context::Segment<'a> {
     fn get_pos(&self) -> (Pos, Pos) {
         let (begin_junction, end_junction) = self
             .network
-            .get_segment_junctions(self.itself)
-            .expect(format!("Unlinked segment {:?}", self.itself.id).as_str());
+            .get_segment_junctions(self.id)
+            .expect(format!("Unlinked segment {:?}", self.id).as_str());
         (begin_junction.pos, end_junction.pos)
     }
 }
@@ -71,8 +71,8 @@ impl<'a> LineLike for context::SegmentLane<'a> {
         let (segment_begin_pos, segment_end_pos) = self.segment.get_pos();
         let v_offset = {
             let lane_count_from_edge = match self.itself.direction {
-                Backward => self.segment.itself.backward_lanes.len() - self.itself.rank - 1,
-                Forward => self.segment.itself.backward_lanes.len() + self.itself.rank,
+                Backward => self.segment.itself.backward_lanes.len() - self.rank - 1,
+                Forward => self.segment.itself.backward_lanes.len() + self.rank,
             };
             let v_ortho = self.segment.get_v_ortho();
             let v_segment_edge = (-0.5)

@@ -1,24 +1,44 @@
 use std::{
-    collections::{hash_map, BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
+    iter::{Enumerate, Map},
     marker::PhantomData,
     sync::atomic,
 };
 
 use crate::{error::RoutieError, spatial::Pos};
 
-struct VecMap<U, T> {
+pub struct VecMap<U, T> {
     index_type: PhantomData<U>,
     data: Vec<T>,
 }
 
 impl<U: From<usize> + Into<usize>, T> VecMap<U, T> {
+    fn new() -> Self {
+        Self {
+            index_type: PhantomData,
+            data: Vec::new(),
+        }
+    }
     fn push(&mut self, val: T) -> U {
         let id = self.data.len();
         self.data.push(val);
         U::from(id)
     }
-    fn get(&self, id: U) -> &T {
-        &self.data[id.into()]
+    fn get(&self, id: U) -> Option<&T> {
+        self.data.get(id.into())
+    }
+    fn get_mut(&mut self, id: U) -> Option<&mut T> {
+        self.data.get_mut(id.into())
+    }
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+    // TODO: implement IntoIter instead
+    pub fn enumerate(&self) -> Map<Enumerate<std::slice::Iter<'_, T>>, fn((usize, &T)) -> (U, &T)> {
+        self.data
+            .iter()
+            .enumerate()
+            .map(|val| (U::from(val.0), &val.1))
     }
 }
 
@@ -34,15 +54,37 @@ pub enum Direction {
     Backward,
 }
 
+// TODO: can we do something so that values don't need to be referenced? remove Clone?
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct JunctionId(usize);
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct SegmentId(usize);
 
+impl From<usize> for JunctionId {
+    fn from(id: usize) -> JunctionId {
+        JunctionId(id)
+    }
+}
+impl From<JunctionId> for usize {
+    fn from(id: JunctionId) -> usize {
+        id.0
+    }
+}
+impl From<usize> for SegmentId {
+    fn from(id: usize) -> SegmentId {
+        SegmentId(id)
+    }
+}
+impl From<SegmentId> for usize {
+    fn from(id: SegmentId) -> usize {
+        id.0
+    }
+}
+
+
 #[derive(Debug)]
 pub struct Junction {
-    id: JunctionId,
     pub pos: Pos,
 }
 
@@ -50,32 +92,28 @@ pub struct Junction {
 pub struct SegmentLane {
     actors: BTreeMap<PosParam, Actor>,
     pub direction: Direction,
-    pub rank: usize,
 }
 
-#[derive(Debug)]
 pub struct Segment {
-    pub id: SegmentId,
     /// off-road only, otherwise they belong to lanes
     pub actors: BTreeMap<PosParam, Actor>,
-    pub forward_lanes: Vec<SegmentLane>,
-    pub backward_lanes: Vec<SegmentLane>,
+    pub forward_lanes: VecMap<usize, SegmentLane>, // TODO: LaneRank newtype?
+    pub backward_lanes: VecMap<usize, SegmentLane>,
 }
 
 pub struct Network {
     id_source: atomic::AtomicUsize,
-    junctions: HashMap<JunctionId, Junction>, // these two should maybe just be vectors
-    segments: HashMap<SegmentId, Segment>,    // then we wouldn't need `generate_id`
+    junctions: VecMap<JunctionId, Junction>,
+    segments: VecMap<SegmentId, Segment>,
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
 
 impl Segment {
-    pub fn new(id: SegmentId) -> Self {
+    pub fn new() -> Self {
         Self {
-            id,
-            forward_lanes: vec![],
-            backward_lanes: vec![],
+            forward_lanes: VecMap::new(),
+            backward_lanes: VecMap::new(),
             actors: BTreeMap::new(),
         }
     }
@@ -84,16 +122,15 @@ impl Segment {
             Direction::Forward => &mut self.forward_lanes,
             Direction::Backward => &mut self.backward_lanes,
         };
-        lanes.push(SegmentLane::new(direction, lanes.len()));
-        lanes.last_mut().unwrap()
+        let id = lanes.push(SegmentLane::new(direction));
+        lanes.get_mut(id).unwrap()
     }
 }
 
 impl SegmentLane {
-    pub fn new(direction: Direction, rank: usize) -> Self {
+    pub fn new(direction: Direction) -> Self {
         Self {
             direction,
-            rank,
             actors: BTreeMap::new(),
         }
     }
@@ -103,26 +140,18 @@ impl Network {
     pub fn new() -> Self {
         Self {
             id_source: atomic::AtomicUsize::new(0),
-            junctions: HashMap::new(),
-            segments: HashMap::new(),
+            junctions: VecMap::new(),
+            segments: VecMap::new(),
             junction_segments: HashMap::new(),
             segment_junctions: HashMap::new(),
         }
     }
 
-    fn generate_id(&self) -> usize {
-        // TODO: can probably relax ordering -- https://doc.rust-lang.org/nightly/nomicon/atomics.html
-        self.id_source.fetch_add(1, atomic::Ordering::SeqCst)
-    }
-
     pub fn add_junction(&mut self, pos: Pos) -> JunctionId {
-        let id = JunctionId(self.generate_id());
-        self.junctions.insert(id, Junction { id, pos });
-        id
+        self.junctions.push(Junction { pos })
     }
     pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> &mut Segment {
-        let id = SegmentId(self.generate_id());
-        self.segments.insert(id, Segment::new(id));
+        let id = self.segments.push(Segment::new());
         self.segment_junctions.insert(id, (begin_id, end_id));
         for junction in [begin_id, end_id].iter() {
             if !self
@@ -134,25 +163,25 @@ impl Network {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
-        self.segments.get_mut(&id).unwrap()
+        self.segments.get_mut(id).unwrap()
     }
 
-    pub fn get_junctions(&self) -> hash_map::Values<JunctionId, Junction> {
-        self.junctions.values()
+    pub fn get_junctions(&self) -> &VecMap<JunctionId, Junction> {
+        &self.junctions
     }
 
-    pub fn get_segments(&self) -> hash_map::Values<SegmentId, Segment> {
-        self.segments.values()
+    pub fn get_segments(&self) -> &VecMap<SegmentId, Segment> {
+        &self.segments
     }
 
     pub fn get_segment_junctions(
         &self,
-        segment: &Segment,
+        segment: SegmentId,
     ) -> Result<(&Junction, &Junction), RoutieError> {
-        match self.segment_junctions.get(&segment.id) {
+        match self.segment_junctions.get(&segment) {
             None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => {
-                match (self.junctions.get(begin_id), self.junctions.get(end_id)) {
+                match (self.junctions.get(*begin_id), self.junctions.get(*end_id)) {
                     (Some(begin), Some(end)) => Ok((begin, end)),
                     (_, _) => Err(RoutieError::InvalidId),
                 }
@@ -165,37 +194,51 @@ pub mod context {
     use crate::road;
     pub struct Junction<'a> {
         pub network: &'a road::Network,
+        pub id: road::JunctionId,
         pub itself: &'a road::Junction,
     }
     pub struct Segment<'a> {
         pub network: &'a road::Network,
+        pub id: road::SegmentId,
         pub itself: &'a road::Segment,
     }
     pub struct SegmentLane<'a> {
         pub segment: &'a Segment<'a>,
+        pub rank: usize, // TODO: newtype?
         pub itself: &'a road::SegmentLane,
     }
 
     impl<'a> Junction<'a> {
-        pub fn new(network: &'a road::Network, junction: &'a road::Junction) -> Self {
+        pub fn new(
+            network: &'a road::Network,
+            id: road::JunctionId,
+            junction: &'a road::Junction,
+        ) -> Self {
             Self {
                 network,
+                id,
                 itself: junction,
             }
         }
     }
     impl<'a> Segment<'a> {
-        pub fn new(network: &'a road::Network, segment: &'a road::Segment) -> Self {
+        pub fn new(
+            network: &'a road::Network,
+            id: road::SegmentId,
+            segment: &'a road::Segment,
+        ) -> Self {
             Self {
                 network,
+                id,
                 itself: segment,
             }
         }
     }
     impl<'a> SegmentLane<'a> {
-        pub fn new(segment: &'a Segment<'a>, lane: &'a road::SegmentLane) -> Self {
+        pub fn new(segment: &'a Segment<'a>, rank: usize, lane: &'a road::SegmentLane) -> Self {
             Self {
                 segment,
+                rank,
                 itself: lane,
             }
         }

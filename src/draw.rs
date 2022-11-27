@@ -54,12 +54,7 @@ impl Artist<'_> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        self.draw_regular_polygon(
-            junction_ctx.itself.pos,
-            4,
-            ROAD_JUNCTION_RADIUS,
-            FRAC_PI_4,
-        );
+        self.draw_regular_polygon(junction_ctx.itself.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
         self.cairo_ctx.fill().unwrap();
     }
 
@@ -90,20 +85,20 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke().unwrap();
 
-        for lane in &segment_ctx.itself.forward_lanes {
-            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, lane));
+        for (rank, lane) in segment_ctx.itself.forward_lanes.enumerate() {
+            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, rank, lane));
         }
-        for lane in &segment_ctx.itself.backward_lanes {
-            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, lane));
+        for (rank, lane) in segment_ctx.itself.backward_lanes.enumerate() {
+            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, rank, lane));
         }
     }
 
     pub fn draw_road_network(&self) {
-        for segment in self.road_network.get_segments() {
-            self.draw_road_segment(&road::context::Segment::new(self.road_network, segment));
+        for (id, segment) in self.road_network.get_segments().enumerate() {
+            self.draw_road_segment(&road::context::Segment::new(self.road_network, id, segment));
         }
-        for junction in self.road_network.get_junctions() {
-            self.draw_road_junction(&road::context::Junction::new(self.road_network, junction));
+        for (id, junction) in self.road_network.get_junctions().enumerate() {
+            self.draw_road_junction(&road::context::Junction::new(self.road_network, id, junction));
         }
     }
 }
