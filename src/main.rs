@@ -32,7 +32,13 @@ fn main() {
     let l2 = s1.add_lane(road::Direction::Forward);
 
     let s2 = network.add_segment(j3, j4);
+    let l3 = s2.add_lane(road::Direction::Backward);
+    let l4 = s2.add_lane(road::Direction::Forward);
+
     let s3 = network.add_segment(j1, j3);
+    let l5 = s3.add_lane(road::Direction::Backward);
+    let l6 = s3.add_lane(road::Direction::Forward);
+
     let s4 = network.add_segment(j2, j4);
 
 

@@ -1,10 +1,13 @@
+use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::{FRAC_PI_4, PI};
 
 use cairo::{Context, ImageSurface};
 use nalgebra::{Point2, Rotation2, Vector2};
 
+use crate::constants::FILLED_SHAPE_BORDER_WIDTH;
 use crate::constants::ROAD_JUNCTION_COLOR;
 use crate::constants::ROAD_JUNCTION_RADIUS;
+use crate::constants::ROAD_LANE_ARROW_SIZE;
 use crate::constants::ROAD_LANE_COLOR;
 use crate::constants::ROAD_LANE_WIDTH_VISUAL;
 use crate::constants::ROAD_SEGMENT_COLOR;
@@ -54,6 +57,7 @@ impl Artist<'_> {
     fn draw_road_junction(&self, junction: &road::Junction) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
         self.draw_regular_polygon(junction.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
         self.cairo_ctx.fill()?;
         Ok(())
@@ -65,12 +69,18 @@ impl Artist<'_> {
     ) -> Result<(), GenericError> {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
 
+        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
         let (begin_pos, end_pos) = located_lane.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke()?;
+
+        self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
+        let tangent_vec = located_lane.get_v_tangent();
+        let theta = FRAC_PI_2 - tangent_vec.x.atan2(tangent_vec.y);
+        self.draw_regular_polygon(located_lane.get_midpoint(), 3, ROAD_LANE_ARROW_SIZE, theta);
+        self.cairo_ctx.fill()?;
         Ok(())
     }
 

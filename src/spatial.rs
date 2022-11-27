@@ -1,4 +1,4 @@
-use std::f64::consts::FRAC_PI_2;
+use std::f64::consts::{FRAC_PI_2, PI};
 
 use nalgebra::{Point2, Rotation2, Vector2};
 
@@ -30,9 +30,15 @@ pub trait PointLike {
 pub trait LineLike {
     fn get_width(&self) -> f64;
     fn get_pos(&self) -> (Pos, Pos);
-    fn get_v_norm(&self) -> Vector {
+    fn get_midpoint(&self) -> Pos {
+        self.get_pos().0 + (0.5 * self.get_v_tangent())
+    }
+    fn get_v_tangent(&self) -> Vector {
         let (begin_pos, end_pos) = self.get_pos();
-        (end_pos - begin_pos).normalize()
+        end_pos - begin_pos
+    }
+    fn get_v_norm(&self) -> Vector {
+        self.get_v_tangent().normalize()
     }
     fn get_v_ortho(&self) -> Vector {
         let rot = Rotation2::new(FRAC_PI_2);
@@ -68,13 +74,13 @@ impl<'a> LineLike for located::SegmentLane<'a> {
     fn get_width(&self) -> f64 {
         ROAD_LANE_WIDTH
     }
-    fn get_v_norm(&self) -> Vector {
-        let located::SegmentLane(_, lane) = self;
-        let (segment_begin_pos, segment_end_pos) = self.get_pos();
-        match lane.direction {
-            Direction::Backward => segment_begin_pos - segment_end_pos,
-            Direction::Forward => segment_end_pos - segment_begin_pos,
-        }
+    fn get_v_tangent(&self) -> Vector {
+        let located::SegmentLane(segment, lane) = self;
+        let rot = Rotation2::new(match lane.direction {
+            Direction::Backward => PI,
+            Direction::Forward => 0.0,
+        });
+        rot * segment.get_v_tangent()
     }
     fn get_pos(&self) -> (Pos, Pos) {
         let located::SegmentLane(located_segment @ located::Segment(_, segment), lane) = self;
@@ -93,7 +99,6 @@ impl<'a> LineLike for located::SegmentLane<'a> {
                 v_segment_edge + (lane_count_from_edge as f64 * ROAD_LANE_WIDTH * v_ortho);
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
-        log::debug!("v_offset = {:?}", v_offset);
         match lane.direction {
             Direction::Backward => (segment_end_pos + v_offset, segment_begin_pos + v_offset),
             Direction::Forward => (segment_begin_pos + v_offset, segment_end_pos + v_offset),
