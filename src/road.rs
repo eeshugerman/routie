@@ -3,7 +3,7 @@ use std::{
     sync::atomic,
 };
 
-use crate::{error::RoutieError, spatial::{Pos}};
+use crate::{error::RoutieError, spatial::Pos};
 
 #[derive(Debug)]
 pub struct Actor {}
@@ -148,4 +148,3 @@ impl Network {
         }
     }
 }
-
