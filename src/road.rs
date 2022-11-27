@@ -1,9 +1,26 @@
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet},
+    marker::PhantomData,
     sync::atomic,
 };
 
 use crate::{error::RoutieError, spatial::Pos};
+
+struct VecMap<U, T> {
+    index_type: PhantomData<U>,
+    data: Vec<T>,
+}
+
+impl<U: From<usize> + Into<usize>, T> VecMap<U, T> {
+    fn push(&mut self, val: T) -> U {
+        let id = self.data.len();
+        self.data.push(val);
+        U::from(id)
+    }
+    fn get(&self, id: U) -> &T {
+        &self.data[id.into()]
+    }
+}
 
 #[derive(Debug)]
 pub struct Actor {}
@@ -33,7 +50,7 @@ pub struct Junction {
 pub struct SegmentLane {
     actors: BTreeMap<PosParam, Actor>,
     pub direction: Direction,
-    pub rank: usize
+    pub rank: usize,
 }
 
 #[derive(Debug)]
@@ -81,7 +98,6 @@ impl SegmentLane {
         }
     }
 }
-
 
 impl Network {
     pub fn new() -> Self {
