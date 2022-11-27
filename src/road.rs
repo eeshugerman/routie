@@ -43,8 +43,6 @@ pub struct Segment {
     pub actors: BTreeMap<PosParam, Actor>,
     pub forward_lanes: Vec<SegmentLane>,
     pub backward_lanes: Vec<SegmentLane>,
-    // pub begin_junction: &Junction,
-    // pub end_junction: &Junction,
 }
 
 pub struct Network {
@@ -131,8 +129,6 @@ impl Network {
         self.segments.values()
     }
 
-    // TODO: would it be possible to make this a method of `Segment`? `Segment`
-    // would need to hold an immutable reference to the `Network`.
     pub fn get_segment_junctions(
         &self,
         segment: &Segment,
