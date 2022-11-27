@@ -4,7 +4,6 @@ use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
     constants::{ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
-    error::RoutieError,
     road::Direction,
 };
 
@@ -13,19 +12,23 @@ pub type Vector = Vector2<f64>;
 
 pub mod located {
     use crate::road;
-    pub struct Junction<'a>(pub &'a road::Junction);
-
     // TODO: use named structs?
+    pub struct Junction<'a>(pub &'a road::Junction);
     pub struct Segment<'a>(pub &'a road::Network, pub &'a road::Segment);
-
     pub struct SegmentLane<'a>(pub &'a Segment<'a>, pub &'a road::SegmentLane);
-
-    // impl Segment
 }
 
 pub trait PointLike {
     fn get_pos(&self) -> Pos;
 }
+
+impl<'a> PointLike for located::Junction<'a> {
+    fn get_pos(&self) -> Pos {
+        let located::Junction(junction) = self;
+        junction.pos
+    }
+}
+
 
 pub trait LineLike {
     fn get_width(&self) -> f64;
@@ -43,13 +46,6 @@ pub trait LineLike {
     fn get_v_ortho(&self) -> Vector {
         let rot = Rotation2::new(FRAC_PI_2);
         return rot * self.get_v_norm();
-    }
-}
-
-impl<'a> PointLike for located::Junction<'a> {
-    fn get_pos(&self) -> Pos {
-        let located::Junction(junction) = self;
-        junction.pos
     }
 }
 
