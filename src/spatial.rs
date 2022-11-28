@@ -4,7 +4,7 @@ use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
     constants::{ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
-    road::{Direction::{Backward, Forward}, context},
+    road::{self, Direction::{Backward, Forward}},
 };
 
 pub type Pos = Point2<f64>;
@@ -14,7 +14,7 @@ pub trait PointLike {
     fn get_pos(&self) -> Pos;
 }
 
-impl<'a> PointLike for context::Junction<'a> {
+impl<'a> PointLike for road::JunctionContext<'a> {
     fn get_pos(&self) -> Pos {
         self.itself.pos
     }
@@ -39,7 +39,7 @@ pub trait LineLike {
     }
 }
 
-impl<'a> LineLike for context::Segment<'a> {
+impl<'a> LineLike for road::SegmentContext<'a> {
     fn get_width(&self) -> f64 {
         let total_lane_count = self.itself.forward_lanes.len() + self.itself.backward_lanes.len();
         (1.0 + (ROAD_SEGMENT_WIGGLE_ROOM_PCT as f64 / 100.0))
@@ -56,7 +56,7 @@ impl<'a> LineLike for context::Segment<'a> {
     }
 }
 
-impl<'a> LineLike for context::SegmentLane<'a> {
+impl<'a> LineLike for road::SegmentLaneContext<'a> {
     fn get_width(&self) -> f64 {
         ROAD_LANE_WIDTH
     }

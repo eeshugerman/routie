@@ -82,7 +82,6 @@ impl From<SegmentId> for usize {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Junction {
     pub pos: Pos,
@@ -190,57 +189,46 @@ impl Network {
     }
 }
 
-pub mod context {
-    use crate::road;
-    pub struct Junction<'a> {
-        pub network: &'a road::Network,
-        pub id: road::JunctionId,
-        pub itself: &'a road::Junction,
-    }
-    pub struct Segment<'a> {
-        pub network: &'a road::Network,
-        pub id: road::SegmentId,
-        pub itself: &'a road::Segment,
-    }
-    pub struct SegmentLane<'a> {
-        pub segment: &'a Segment<'a>,
-        pub rank: usize, // TODO: newtype?
-        pub itself: &'a road::SegmentLane,
-    }
+pub struct JunctionContext<'a> {
+    pub network: &'a Network,
+    pub id: JunctionId,
+    pub itself: &'a Junction,
+}
+pub struct SegmentContext<'a> {
+    pub network: &'a Network,
+    pub id: SegmentId,
+    pub itself: &'a Segment,
+}
+pub struct SegmentLaneContext<'a> {
+    pub segment: &'a SegmentContext<'a>,
+    pub rank: usize, // TODO: newtype?
+    pub itself: &'a SegmentLane,
+}
 
-    impl<'a> Junction<'a> {
-        pub fn new(
-            network: &'a road::Network,
-            id: road::JunctionId,
-            junction: &'a road::Junction,
-        ) -> Self {
-            Self {
-                network,
-                id,
-                itself: junction,
-            }
+impl<'a> JunctionContext<'a> {
+    pub fn new(network: &'a Network, id: JunctionId, junction: &'a Junction) -> Self {
+        Self {
+            network,
+            id,
+            itself: junction,
         }
     }
-    impl<'a> Segment<'a> {
-        pub fn new(
-            network: &'a road::Network,
-            id: road::SegmentId,
-            segment: &'a road::Segment,
-        ) -> Self {
-            Self {
-                network,
-                id,
-                itself: segment,
-            }
+}
+impl<'a> SegmentContext<'a> {
+    pub fn new(network: &'a Network, id: SegmentId, segment: &'a Segment) -> Self {
+        Self {
+            network,
+            id,
+            itself: segment,
         }
     }
-    impl<'a> SegmentLane<'a> {
-        pub fn new(segment: &'a Segment<'a>, rank: usize, lane: &'a road::SegmentLane) -> Self {
-            Self {
-                segment,
-                rank,
-                itself: lane,
-            }
+}
+impl<'a> SegmentLaneContext<'a> {
+    pub fn new(segment: &'a SegmentContext<'a>, rank: usize, lane: &'a SegmentLane) -> Self {
+        Self {
+            segment,
+            rank,
+            itself: lane,
         }
     }
 }

@@ -50,7 +50,7 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(start.x, start.y);
     }
 
-    fn draw_road_junction(&self, junction_ctx: &road::context::Junction) {
+    fn draw_road_junction(&self, junction_ctx: &road::JunctionContext) {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
@@ -58,7 +58,7 @@ impl Artist<'_> {
         self.cairo_ctx.fill().unwrap();
     }
 
-    fn draw_road_segment_lane(&self, lane_ctx: &road::context::SegmentLane) {
+    fn draw_road_segment_lane(&self, lane_ctx: &road::SegmentLaneContext) {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
 
@@ -75,7 +75,7 @@ impl Artist<'_> {
         self.cairo_ctx.fill().unwrap();
     }
 
-    fn draw_road_segment(&self, segment_ctx: &road::context::Segment) {
+    fn draw_road_segment(&self, segment_ctx: &road::SegmentContext) {
         let (red, green, blue) = ROAD_SEGMENT_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(segment_ctx.get_width());
@@ -86,19 +86,19 @@ impl Artist<'_> {
         self.cairo_ctx.stroke().unwrap();
 
         for (rank, lane) in segment_ctx.itself.forward_lanes.enumerate() {
-            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, rank, lane));
+            self.draw_road_segment_lane(&road::SegmentLaneContext::new(segment_ctx, rank, lane));
         }
         for (rank, lane) in segment_ctx.itself.backward_lanes.enumerate() {
-            self.draw_road_segment_lane(&road::context::SegmentLane::new(segment_ctx, rank, lane));
+            self.draw_road_segment_lane(&road::SegmentLaneContext::new(segment_ctx, rank, lane));
         }
     }
 
     pub fn draw_road_network(&self) {
         for (id, segment) in self.road_network.get_segments().enumerate() {
-            self.draw_road_segment(&road::context::Segment::new(self.road_network, id, segment));
+            self.draw_road_segment(&road::SegmentContext::new(self.road_network, id, segment));
         }
         for (id, junction) in self.road_network.get_junctions().enumerate() {
-            self.draw_road_junction(&road::context::Junction::new(self.road_network, id, junction));
+            self.draw_road_junction(&road::JunctionContext::new(self.road_network, id, junction));
         }
     }
 }
