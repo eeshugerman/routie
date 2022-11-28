@@ -4,7 +4,10 @@ use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
     constants::{ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
-    road::{self, Direction::{Backward, Forward}},
+    road::{
+        self,
+        Direction::{Backward, Forward},
+    },
 };
 
 pub type Pos = Point2<f64>;
@@ -70,9 +73,10 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
     fn get_pos(&self) -> (Pos, Pos) {
         let (segment_begin_pos, segment_end_pos) = self.segment.get_pos();
         let v_offset = {
+            let rank: i32 = self.rank.into();
             let lane_count_from_edge = match self.itself.direction {
-                Backward => self.segment.itself.backward_lanes.len() - self.rank - 1,
-                Forward => self.segment.itself.backward_lanes.len() + self.rank,
+                Backward => self.segment.itself.backward_lanes.len() as i32 - rank - 1,
+                Forward => self.segment.itself.backward_lanes.len() as i32 + rank,
             };
             let v_ortho = self.segment.get_v_ortho();
             let v_segment_edge = (-0.5)

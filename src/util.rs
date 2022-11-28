@@ -1,4 +1,3 @@
-
 #[macro_use]
 pub mod seq_indexed_store {
     use std::{
@@ -32,7 +31,9 @@ pub mod seq_indexed_store {
             self.data.len()
         }
         // TODO: implement IntoIter instead
-        pub fn enumerate(&self) -> Map<Enumerate<std::slice::Iter<'_, T>>, fn((usize, &T)) -> (U, &T)> {
+        pub fn enumerate(
+            &self,
+        ) -> Map<Enumerate<std::slice::Iter<'_, T>>, fn((usize, &T)) -> (U, &T)> {
             self.data
                 .iter()
                 .enumerate()
@@ -45,7 +46,6 @@ pub mod seq_indexed_store {
             // TODO: can we do something so that values don't need to be referenced? remove Clone?
             #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
             pub struct $name(usize);
-
             impl From<usize> for $name {
                 fn from(id: usize) -> $name {
                     $name(id)
@@ -54,6 +54,16 @@ pub mod seq_indexed_store {
             impl From<$name> for usize {
                 fn from(id: $name) -> usize {
                     id.0
+                }
+            }
+            impl From<$name> for u32 {
+                fn from(id: $name) -> u32 {
+                    id.0 as u32
+                }
+            }
+            impl From<$name> for i32 {
+                fn from(id: $name) -> i32 {
+                    id.0 as i32
                 }
             }
         };

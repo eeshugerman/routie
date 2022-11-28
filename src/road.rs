@@ -16,6 +16,7 @@ pub enum Direction {
 
 define_index_type!(JunctionId);
 define_index_type!(SegmentId);
+define_index_type!(LaneRank);
 
 #[derive(Debug)]
 pub struct Junction {
@@ -31,8 +32,8 @@ pub struct SegmentLane {
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
     pub actors: BTreeMap<PosParam, Actor>,
-    pub forward_lanes: SeqIndexedStore<usize, SegmentLane>, // TODO: LaneRank newtype?
-    pub backward_lanes: SeqIndexedStore<usize, SegmentLane>,
+    pub forward_lanes: SeqIndexedStore<LaneRank, SegmentLane>,
+    pub backward_lanes: SeqIndexedStore<LaneRank, SegmentLane>,
 }
 
 pub struct Network {
@@ -134,7 +135,7 @@ pub struct SegmentContext<'a> {
 }
 pub struct SegmentLaneContext<'a> {
     pub segment: &'a SegmentContext<'a>,
-    pub rank: usize, // TODO: newtype?
+    pub rank: LaneRank,
     pub itself: &'a SegmentLane,
 }
 
@@ -157,7 +158,7 @@ impl<'a> SegmentContext<'a> {
     }
 }
 impl<'a> SegmentLaneContext<'a> {
-    pub fn new(segment: &'a SegmentContext<'a>, rank: usize, lane: &'a SegmentLane) -> Self {
+    pub fn new(segment: &'a SegmentContext<'a>, rank: LaneRank, lane: &'a SegmentLane) -> Self {
         Self {
             segment,
             rank,
