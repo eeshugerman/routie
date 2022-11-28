@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::{error::RoutieError, spatial::Pos, util::SeqIndexedStore};
+use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::{self, SeqIndexedStore}};
 
 #[derive(Debug)]
 pub struct Actor {}
@@ -14,33 +14,8 @@ pub enum Direction {
     Backward,
 }
 
-// TODO: can we do something so that values don't need to be referenced? remove Clone?
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct JunctionId(usize);
-
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct SegmentId(usize);
-
-impl From<usize> for JunctionId {
-    fn from(id: usize) -> JunctionId {
-        JunctionId(id)
-    }
-}
-impl From<JunctionId> for usize {
-    fn from(id: JunctionId) -> usize {
-        id.0
-    }
-}
-impl From<usize> for SegmentId {
-    fn from(id: usize) -> SegmentId {
-        SegmentId(id)
-    }
-}
-impl From<SegmentId> for usize {
-    fn from(id: SegmentId) -> usize {
-        id.0
-    }
-}
+define_index_type!(JunctionId);
+define_index_type!(SegmentId);
 
 #[derive(Debug)]
 pub struct Junction {

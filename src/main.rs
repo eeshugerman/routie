@@ -1,9 +1,10 @@
 extern crate cairo;
 extern crate nalgebra;
 
+#[macro_use]
+mod util;
 mod constants;
 mod error;
-mod util;
 mod actor;
 mod draw;
 mod road;
