@@ -3,6 +3,7 @@ extern crate nalgebra;
 
 mod constants;
 mod error;
+mod util;
 mod actor;
 mod draw;
 mod road;

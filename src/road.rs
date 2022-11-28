@@ -1,46 +1,6 @@
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    iter::{Enumerate, Map},
-    marker::PhantomData,
-    sync::atomic,
-};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::{error::RoutieError, spatial::Pos};
-
-pub struct VecMap<U, T> {
-    index_type: PhantomData<U>,
-    data: Vec<T>,
-}
-
-impl<U: From<usize> + Into<usize>, T> VecMap<U, T> {
-    fn new() -> Self {
-        Self {
-            index_type: PhantomData,
-            data: Vec::new(),
-        }
-    }
-    fn push(&mut self, val: T) -> U {
-        let id = self.data.len();
-        self.data.push(val);
-        U::from(id)
-    }
-    fn get(&self, id: U) -> Option<&T> {
-        self.data.get(id.into())
-    }
-    fn get_mut(&mut self, id: U) -> Option<&mut T> {
-        self.data.get_mut(id.into())
-    }
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-    // TODO: implement IntoIter instead
-    pub fn enumerate(&self) -> Map<Enumerate<std::slice::Iter<'_, T>>, fn((usize, &T)) -> (U, &T)> {
-        self.data
-            .iter()
-            .enumerate()
-            .map(|val| (U::from(val.0), &val.1))
-    }
-}
+use crate::{error::RoutieError, spatial::Pos, util::SeqIndexedStore};
 
 #[derive(Debug)]
 pub struct Actor {}
@@ -96,14 +56,13 @@ pub struct SegmentLane {
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
     pub actors: BTreeMap<PosParam, Actor>,
-    pub forward_lanes: VecMap<usize, SegmentLane>, // TODO: LaneRank newtype?
-    pub backward_lanes: VecMap<usize, SegmentLane>,
+    pub forward_lanes: SeqIndexedStore<usize, SegmentLane>, // TODO: LaneRank newtype?
+    pub backward_lanes: SeqIndexedStore<usize, SegmentLane>,
 }
 
 pub struct Network {
-    id_source: atomic::AtomicUsize,
-    junctions: VecMap<JunctionId, Junction>,
-    segments: VecMap<SegmentId, Segment>,
+    junctions: SeqIndexedStore<JunctionId, Junction>,
+    segments: SeqIndexedStore<SegmentId, Segment>,
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
@@ -111,8 +70,8 @@ pub struct Network {
 impl Segment {
     pub fn new() -> Self {
         Self {
-            forward_lanes: VecMap::new(),
-            backward_lanes: VecMap::new(),
+            forward_lanes: SeqIndexedStore::new(),
+            backward_lanes: SeqIndexedStore::new(),
             actors: BTreeMap::new(),
         }
     }
@@ -138,9 +97,8 @@ impl SegmentLane {
 impl Network {
     pub fn new() -> Self {
         Self {
-            id_source: atomic::AtomicUsize::new(0),
-            junctions: VecMap::new(),
-            segments: VecMap::new(),
+            junctions: SeqIndexedStore::new(),
+            segments: SeqIndexedStore::new(),
             junction_segments: HashMap::new(),
             segment_junctions: HashMap::new(),
         }
@@ -165,11 +123,11 @@ impl Network {
         self.segments.get_mut(id).unwrap()
     }
 
-    pub fn get_junctions(&self) -> &VecMap<JunctionId, Junction> {
+    pub fn get_junctions(&self) -> &SeqIndexedStore<JunctionId, Junction> {
         &self.junctions
     }
 
-    pub fn get_segments(&self) -> &VecMap<SegmentId, Segment> {
+    pub fn get_segments(&self) -> &SeqIndexedStore<SegmentId, Segment> {
         &self.segments
     }
 
