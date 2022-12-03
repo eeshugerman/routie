@@ -27,10 +27,17 @@ pub mod seq_indexed_store {
         pub fn len(&self) -> usize {
             self.data.len()
         }
-        // TODO: implement IntoIter instead ?
+
         pub fn enumerate(&self) -> impl Iterator<Item = (U, &T)> {
             self.data
                 .iter()
+                .enumerate()
+                .map(|val| (U::from(val.0), val.1))
+        }
+
+        pub fn enumerate_mut(&mut self) -> impl Iterator<Item = (U, &mut T)>{
+            self.data
+                .iter_mut()
                 .enumerate()
                 .map(|val| (U::from(val.0), val.1))
         }

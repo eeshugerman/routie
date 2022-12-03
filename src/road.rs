@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use cairo::glib::FormatSizeFlags;
+
 use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
 
 #[derive(Debug)]
@@ -8,7 +10,7 @@ pub struct Actor {}
 #[derive(Debug)]
 pub struct PosParam(f64);
 
-#[derive(Debug, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Direction {
     Forward,
     Backward,
@@ -19,30 +21,13 @@ define_index_type!(SegmentId);
 define_index_type!(SegmentLaneRank);
 define_index_type!(JunctionLaneId);
 
-pub struct JunctionLane {
-    actors: BTreeMap<PosParam, Actor>,
-}
 pub struct SegmentLane {
     pub direction: Direction,
     actors: BTreeMap<PosParam, Actor>,
 }
 
-pub struct Junction {
-    pub pos: Pos,
-    lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
-    lane_inputs: HashMap<(SegmentId, Direction, SegmentLaneRank), HashSet<JunctionLaneId>>,
-    lane_outputs: HashMap<JunctionLaneId, SegmentLane>,
-}
-
-impl Junction {
-    pub fn new(pos: Pos) -> Self {
-        Self {
-            pos,
-            lanes: SeqIndexedStore::new(),
-            lane_inputs: HashMap::new(),
-            lane_outputs: HashMap::new(),
-        }
-    }
+pub struct JunctionLane {
+    actors: BTreeMap<PosParam, Actor>,
 }
 
 pub struct Segment {
@@ -52,38 +37,21 @@ pub struct Segment {
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
 
+// #[derive(PartialEq, Eq, Hash)]
+pub type QualifiedSegmentLaneId = (SegmentId, Direction, SegmentLaneRank);
+
+pub struct Junction {
+    pub pos: Pos,
+    lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
+    lane_inputs: HashMap<QualifiedSegmentLaneId, HashSet<JunctionLaneId>>,
+    lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneId>,
+}
+
 pub struct Network {
     junctions: SeqIndexedStore<JunctionId, Junction>,
     segments: SeqIndexedStore<SegmentId, Segment>,
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
-}
-
-impl Segment {
-    pub fn new() -> Self {
-        Self {
-            forward_lanes: SeqIndexedStore::new(),
-            backward_lanes: SeqIndexedStore::new(),
-            actors: BTreeMap::new(),
-        }
-    }
-    pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
-        let lanes = match direction {
-            Direction::Forward => &mut self.forward_lanes,
-            Direction::Backward => &mut self.backward_lanes,
-        };
-        let id = lanes.push(SegmentLane::new(direction));
-        lanes.get_mut(id).unwrap()
-    }
-}
-
-impl SegmentLane {
-    pub fn new(direction: Direction) -> Self {
-        Self {
-            direction,
-            actors: BTreeMap::new(),
-        }
-    }
 }
 
 impl Network {
@@ -99,6 +67,7 @@ impl Network {
     pub fn add_junction(&mut self, pos: Pos) -> JunctionId {
         self.junctions.push(Junction::new(pos))
     }
+
     pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> &mut Segment {
         let id = self.segments.push(Segment::new());
         self.segment_junctions.insert(id, (begin_id, end_id));
@@ -135,6 +104,110 @@ impl Network {
                     (_, _) => Err(RoutieError::InvalidId),
                 }
             }
+        }
+    }
+
+    pub fn connect_junctions(&mut self) {
+        for (junction_id, junction) in self.junctions.enumerate_mut() {
+            let segment_ids = if let Some(ids) = self.junction_segments.get(&junction_id) {
+                ids
+            } else {
+                log::warn!("Junction has no linked segments");
+                return;
+            };
+            for incoming_segment_id in segment_ids {
+                let incoming_segment = self.segments.get(*incoming_segment_id).unwrap();
+                let (begin_junction_id, end_junction_id) =
+                    *self.segment_junctions.get(&incoming_segment_id).unwrap();
+                assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
+                let (incoming_direction, outgoing_direction) = if junction_id == begin_junction_id {
+                    (Direction::Backward, Direction::Forward)
+                } else {
+                    (Direction::Forward, Direction::Backward)
+                };
+                let incoming_lanes = match incoming_direction {
+                    Direction::Backward => &incoming_segment.backward_lanes,
+                    Direction::Forward => &incoming_segment.forward_lanes,
+                };
+                for outgoing_segment_id in segment_ids {
+                    if incoming_segment_id == outgoing_segment_id {
+                        continue;
+                    }
+                    let outgoing_segment = self.segments.get(*outgoing_segment_id).unwrap();
+                    let outgoing_lanes = &match outgoing_direction {
+                        Direction::Backward => &outgoing_segment.backward_lanes,
+                        Direction::Forward => &outgoing_segment.forward_lanes,
+                    };
+                    for ((incoming_lane_rank, _), (outgoing_lane_rank, _)) in
+                        std::iter::zip(incoming_lanes.enumerate(), outgoing_lanes.enumerate())
+                    {
+                        junction.add_lane(
+                            (*incoming_segment_id, incoming_direction, incoming_lane_rank),
+                            (*outgoing_segment_id, outgoing_direction, outgoing_lane_rank),
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Junction {
+    pub fn new(pos: Pos) -> Self {
+        Self {
+            pos,
+            lanes: SeqIndexedStore::new(),
+            lane_inputs: HashMap::new(),
+            lane_outputs: HashMap::new(),
+        }
+    }
+
+    fn add_lane(
+        &mut self,
+        begin: QualifiedSegmentLaneId,
+        end: QualifiedSegmentLaneId,
+    ) -> &JunctionLane {
+        let id = self.lanes.push(JunctionLane::new());
+        self.lane_inputs
+            .entry(begin)
+            .or_insert(HashSet::new())
+            .insert(id);
+        self.lane_outputs.insert(id, end);
+        self.lanes.get(id).unwrap()
+    }
+}
+
+impl Segment {
+    pub fn new() -> Self {
+        Self {
+            forward_lanes: SeqIndexedStore::new(),
+            backward_lanes: SeqIndexedStore::new(),
+            actors: BTreeMap::new(),
+        }
+    }
+    pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
+        let lanes = match direction {
+            Direction::Forward => &mut self.forward_lanes,
+            Direction::Backward => &mut self.backward_lanes,
+        };
+        let id = lanes.push(SegmentLane::new(direction));
+        lanes.get_mut(id).unwrap()
+    }
+}
+
+impl SegmentLane {
+    pub fn new(direction: Direction) -> Self {
+        Self {
+            direction,
+            actors: BTreeMap::new(),
+        }
+    }
+}
+
+impl JunctionLane {
+    pub fn new() -> Self {
+        Self {
+            actors: BTreeMap::new(),
         }
     }
 }
@@ -181,11 +254,22 @@ impl<'a> SegmentLaneContext<'a> {
         rank: SegmentLaneRank,
         lane: &'a SegmentLane,
     ) -> Self {
+        let context_lanes = match direction {
+            Direction::Forward => &segment.itself.forward_lanes,
+            Direction::Backward => &segment.itself.backward_lanes,
+        };
+        assert!(match context_lanes.get(rank) {
+            None => false,
+            Some(context_lane) => lane as *const _ == context_lane as *const _,
+        });
         Self {
             segment,
             direction,
             rank,
             itself: lane,
         }
+    }
+    pub fn get_qualified_id(self) -> QualifiedSegmentLaneId {
+        (self.segment.id, self.direction, self.rank)
     }
 }

@@ -43,6 +43,7 @@ fn main() {
 
     let s4 = network.add_segment(j2, j4);
 
+    network.connect_junctions();
 
     let artist = draw::Artist::new(&surface, &network);
     artist.draw_road_network();
