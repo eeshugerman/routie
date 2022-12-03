@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::{self, SeqIndexedStore}};
+use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
 
 #[derive(Debug)]
 pub struct Actor {}
@@ -8,7 +8,7 @@ pub struct Actor {}
 #[derive(Debug)]
 pub struct PosParam(f64);
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Clone, Copy)]
 pub enum Direction {
     Forward,
     Backward,
@@ -16,24 +16,40 @@ pub enum Direction {
 
 define_index_type!(JunctionId);
 define_index_type!(SegmentId);
-define_index_type!(LaneRank);
+define_index_type!(SegmentLaneRank);
+define_index_type!(JunctionLaneId);
 
-#[derive(Debug)]
-pub struct Junction {
-    pub pos: Pos,
+pub struct JunctionLane {
+    actors: BTreeMap<PosParam, Actor>,
+}
+pub struct SegmentLane {
+    pub direction: Direction,
+    actors: BTreeMap<PosParam, Actor>,
 }
 
-#[derive(Debug)]
-pub struct SegmentLane {
-    actors: BTreeMap<PosParam, Actor>,
-    pub direction: Direction,
+pub struct Junction {
+    pub pos: Pos,
+    lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
+    lane_inputs: HashMap<(SegmentId, Direction, SegmentLaneRank), HashSet<JunctionLaneId>>,
+    lane_outputs: HashMap<JunctionLaneId, SegmentLane>,
+}
+
+impl Junction {
+    pub fn new(pos: Pos) -> Self {
+        Self {
+            pos,
+            lanes: SeqIndexedStore::new(),
+            lane_inputs: HashMap::new(),
+            lane_outputs: HashMap::new(),
+        }
+    }
 }
 
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
     pub actors: BTreeMap<PosParam, Actor>,
-    pub forward_lanes: SeqIndexedStore<LaneRank, SegmentLane>,
-    pub backward_lanes: SeqIndexedStore<LaneRank, SegmentLane>,
+    pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
+    pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
 
 pub struct Network {
@@ -81,7 +97,7 @@ impl Network {
     }
 
     pub fn add_junction(&mut self, pos: Pos) -> JunctionId {
-        self.junctions.push(Junction { pos })
+        self.junctions.push(Junction::new(pos))
     }
     pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> &mut Segment {
         let id = self.segments.push(Segment::new());
@@ -135,7 +151,8 @@ pub struct SegmentContext<'a> {
 }
 pub struct SegmentLaneContext<'a> {
     pub segment: &'a SegmentContext<'a>,
-    pub rank: LaneRank,
+    pub direction: Direction,
+    pub rank: SegmentLaneRank,
     pub itself: &'a SegmentLane,
 }
 
@@ -158,9 +175,15 @@ impl<'a> SegmentContext<'a> {
     }
 }
 impl<'a> SegmentLaneContext<'a> {
-    pub fn new(segment: &'a SegmentContext<'a>, rank: LaneRank, lane: &'a SegmentLane) -> Self {
+    pub fn new(
+        segment: &'a SegmentContext<'a>,
+        direction: Direction,
+        rank: SegmentLaneRank,
+        lane: &'a SegmentLane,
+    ) -> Self {
         Self {
             segment,
+            direction,
             rank,
             itself: lane,
         }

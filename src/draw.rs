@@ -86,10 +86,20 @@ impl Artist<'_> {
         self.cairo_ctx.stroke().unwrap();
 
         for (rank, lane) in segment_ctx.itself.forward_lanes.enumerate() {
-            self.draw_road_segment_lane(&road::SegmentLaneContext::new(segment_ctx, rank, lane));
+            self.draw_road_segment_lane(&road::SegmentLaneContext::new(
+                segment_ctx,
+                road::Direction::Forward,
+                rank,
+                lane,
+            ));
         }
         for (rank, lane) in segment_ctx.itself.backward_lanes.enumerate() {
-            self.draw_road_segment_lane(&road::SegmentLaneContext::new(segment_ctx, rank, lane));
+            self.draw_road_segment_lane(&road::SegmentLaneContext::new(
+                segment_ctx,
+                road::Direction::Backward,
+                rank,
+                lane,
+            ));
         }
     }
 
