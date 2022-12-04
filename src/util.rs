@@ -6,7 +6,7 @@ pub mod seq_indexed_store {
         data: Vec<T>,
     }
 
-    impl<U: From<usize> + Into<usize>, T> SeqIndexedStore<U, T> {
+    impl<U: From<usize> + Into<usize> + Copy, T> SeqIndexedStore<U, T> {
         pub fn new() -> Self {
             Self {
                 index_type: PhantomData,
@@ -18,11 +18,11 @@ pub mod seq_indexed_store {
             self.data.push(val);
             U::from(id)
         }
-        pub fn get(&self, id: U) -> Option<&T> {
-            self.data.get(id.into())
+        pub fn get(&self, id: &U) -> Option<&T> {
+            self.data.get(Into::<usize>::into(*id))
         }
-        pub fn get_mut(&mut self, id: U) -> Option<&mut T> {
-            self.data.get_mut(id.into())
+        pub fn get_mut(&mut self, id: &U) -> Option<&mut T> {
+            self.data.get_mut(Into::<usize>::into(*id))
         }
         pub fn len(&self) -> usize {
             self.data.len()
@@ -45,7 +45,6 @@ pub mod seq_indexed_store {
 
     macro_rules! define_index_type {
         ($name:ident) => {
-            // TODO: can we do something so that values don't need to be referenced? remove Clone?
             #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
             pub struct $name(usize);
             impl From<usize> for $name {

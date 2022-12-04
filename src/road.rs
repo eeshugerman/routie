@@ -80,7 +80,7 @@ impl Network {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
-        self.segments.get_mut(id).unwrap()
+        self.segments.get_mut(&id).unwrap()
     }
 
     pub fn get_segment_junctions(
@@ -97,7 +97,7 @@ impl Network {
         &self,
         segment_id: SegmentId,
     ) -> Result<SegmentContext, RoutieError> {
-        match self.segments.get(segment_id) {
+        match self.segments.get(&segment_id) {
             None => Err(RoutieError::InvalidId),
             Some(segment) => Ok(SegmentContext::new(&self, segment_id, segment)),
         }
@@ -107,7 +107,7 @@ impl Network {
         &self,
         junction_id: JunctionId,
     ) -> Result<JunctionContext, RoutieError> {
-        match self.junctions.get(junction_id) {
+        match self.junctions.get(&junction_id) {
             None => Err(RoutieError::InvalidId),
             Some(junction) => Ok(JunctionContext::new(&self, junction_id, junction)),
         }
@@ -122,7 +122,7 @@ impl Network {
                 return;
             };
             for incoming_segment_id in segment_ids {
-                let incoming_segment = self.segments.get(*incoming_segment_id).unwrap();
+                let incoming_segment = self.segments.get(incoming_segment_id).unwrap();
                 let incoming_direction = {
                     let (begin_junction_id, end_junction_id) =
                         *self.segment_junctions.get(&incoming_segment_id).unwrap();
@@ -133,6 +133,7 @@ impl Network {
                         Direction::Forward
                     }
                 };
+
                 let incoming_lanes = {
                     match incoming_direction {
                         Direction::Backward => &incoming_segment.backward_lanes,
@@ -143,7 +144,7 @@ impl Network {
                     if incoming_segment_id == outgoing_segment_id {
                         continue;
                     }
-                    let outgoing_segment = self.segments.get(*outgoing_segment_id).unwrap();
+                    let outgoing_segment = self.segments.get(outgoing_segment_id).unwrap();
                     let outgoing_direction = {
                         let (begin_junction_id, end_junction_id) =
                             *self.segment_junctions.get(&outgoing_segment_id).unwrap();
@@ -197,7 +198,7 @@ impl Junction {
             .insert(id);
         self.lane_inputs_inverse.insert(id, begin);
         self.lane_outputs.insert(id, end);
-        self.lanes.get(id).unwrap()
+        self.lanes.get(&id).unwrap()
     }
 
     pub fn enumerate_lanes(&self) -> impl Iterator<Item = (JunctionLaneId, &JunctionLane)> {
@@ -219,7 +220,7 @@ impl Segment {
             Direction::Backward => &mut self.backward_lanes,
         };
         let id = lanes.push(SegmentLane::new(direction));
-        lanes.get_mut(id).unwrap()
+        lanes.get_mut(&id).unwrap()
     }
 }
 
@@ -286,7 +287,7 @@ impl<'a> JunctionLaneContext<'a> {
         id: JunctionLaneId,
         lane: &'a JunctionLane,
     ) -> Self {
-        assert!(match junction.itself.lanes.get(id) {
+        assert!(match junction.itself.lanes.get(&id) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
@@ -325,7 +326,7 @@ impl<'a> SegmentLaneContext<'a> {
             Direction::Forward => &segment.itself.forward_lanes,
             Direction::Backward => &segment.itself.backward_lanes,
         };
-        assert!(match context_lanes.get(rank) {
+        assert!(match context_lanes.get(&rank) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
