@@ -30,7 +30,7 @@ pub struct JunctionLane {
 
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
-    pub actors: BTreeMap<PosParam, Actor>,
+    actors: BTreeMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
@@ -134,12 +134,7 @@ impl Network {
                     }
                 };
 
-                let incoming_lanes = {
-                    match incoming_direction {
-                        Direction::Backward => &incoming_segment.backward_lanes,
-                        Direction::Forward => &incoming_segment.forward_lanes,
-                    }
-                };
+                let incoming_lanes = incoming_segment.get_lanes(incoming_direction);
                 for outgoing_segment_id in segment_ids {
                     if incoming_segment_id == outgoing_segment_id {
                         continue;
@@ -155,10 +150,7 @@ impl Network {
                             Direction::Backward
                         }
                     };
-                    let outgoing_lanes = &match outgoing_direction {
-                        Direction::Backward => &outgoing_segment.backward_lanes,
-                        Direction::Forward => &outgoing_segment.forward_lanes,
-                    };
+                    let outgoing_lanes = outgoing_segment.get_lanes(outgoing_direction);
 
                     // connect by rank //
                     for ((incoming_lane_rank, _), (outgoing_lane_rank, _)) in
@@ -221,6 +213,15 @@ impl Segment {
         };
         let id = lanes.push(SegmentLane::new(direction));
         lanes.get_mut(&id).unwrap()
+    }
+    pub fn get_lanes(
+        &self,
+        direction: Direction,
+    ) -> &SeqIndexedStore<SegmentLaneRank, SegmentLane> {
+        match direction {
+            Direction::Forward => &self.forward_lanes,
+            Direction::Backward => &self.backward_lanes,
+        }
     }
 }
 
@@ -322,10 +323,7 @@ impl<'a> SegmentLaneContext<'a> {
         rank: SegmentLaneRank,
         lane: &'a SegmentLane,
     ) -> Self {
-        let context_lanes = match direction {
-            Direction::Forward => &segment.itself.forward_lanes,
-            Direction::Backward => &segment.itself.backward_lanes,
-        };
+        let context_lanes = segment.itself.get_lanes(direction);
         assert!(match context_lanes.get(&rank) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,

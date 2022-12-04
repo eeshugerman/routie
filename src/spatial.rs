@@ -117,10 +117,7 @@ impl<'a> road::JunctionLaneContext<'a> {
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
             let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
-            let segment_lane = match direction {
-                Backward => &segment_ctx.itself.backward_lanes,
-                Forward => &segment_ctx.itself.forward_lanes
-            }.get(&rank).unwrap();
+            let segment_lane = segment_ctx.itself.get_lanes(direction).get(&rank).unwrap();
             SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane).get_pos()
         };
         let (_, begin_pos) = to_pos(input_segment_lane);
