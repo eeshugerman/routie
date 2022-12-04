@@ -4,8 +4,8 @@ pub type CairoError = cairo::Error;
 
 #[derive(Debug)]
 pub enum RoutieError {
-    AlreadyLinkedSegment,
-    UnlinkedSegment,
+    // AlreadyLinkedSegment,
+    // UnlinkedSegment,
     InvalidId, // TODO: be more specific
 }
 

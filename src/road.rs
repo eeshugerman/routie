@@ -23,15 +23,18 @@ define_index_type!(JunctionLaneId);
 
 pub struct SegmentLane {
     pub direction: Direction,
+    #[allow(dead_code)]
     actors: BTreeMap<PosParam, Actor>,
 }
 
 pub struct JunctionLane {
+    #[allow(dead_code)]
     actors: BTreeMap<PosParam, Actor>,
 }
 
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
+    #[allow(dead_code)]
     actors: BTreeMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
@@ -198,6 +201,7 @@ impl Segment {
         Self {
             forward_lanes: SeqIndexedStore::new(),
             backward_lanes: SeqIndexedStore::new(),
+            #[allow(dead_code)]
             actors: BTreeMap::new(),
         }
     }

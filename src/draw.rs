@@ -28,13 +28,13 @@ impl Artist<'_> {
         Artist { road_network, cairo_ctx }
     }
 
-    fn draw_polylines<const N: usize>(&self, points: [Point2<f64>; N]) {
-        self.cairo_ctx.move_to(points[0].x, points[0].y);
-        for point in &points[1..] {
-            self.cairo_ctx.line_to(point.x, point.y);
-        }
-        self.cairo_ctx.line_to(points[0].x, points[0].y);
-    }
+    // fn draw_polylines<const N: usize>(&self, points: [Point2<f64>; N]) {
+    //     self.cairo_ctx.move_to(points[0].x, points[0].y);
+    //     for point in &points[1..] {
+    //         self.cairo_ctx.line_to(point.x, point.y);
+    //     }
+    //     self.cairo_ctx.line_to(points[0].x, points[0].y);
+    // }
 
     fn draw_regular_polygon(&self, pos: Point2<f64>, n: i8, r: f64, theta_0: f64) {
         let start = pos + r * Rotation2::new(theta_0).matrix() * I_HAT;

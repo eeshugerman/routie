@@ -4,7 +4,7 @@ use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
     constants::{
-        ROAD_JUNCTION_COLOR, ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT,
+        ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT,
     },
     road::{
         self,
