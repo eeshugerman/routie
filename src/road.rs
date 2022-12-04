@@ -14,6 +14,8 @@ pub enum Direction {
     Backward,
 }
 
+use Direction::{Backward, Forward};
+
 define_index_type!(JunctionId);
 define_index_type!(SegmentId);
 define_index_type!(SegmentLaneRank);
@@ -128,9 +130,9 @@ impl Network {
                         *self.segment_junctions.get(&incoming_segment_id).unwrap();
                     assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
                     if junction_id == begin_junction_id {
-                        Direction::Backward
+                        Backward
                     } else {
-                        Direction::Forward
+                        Forward
                     }
                 };
 
@@ -145,9 +147,9 @@ impl Network {
                             *self.segment_junctions.get(&outgoing_segment_id).unwrap();
                         assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
                         if junction_id == begin_junction_id {
-                            Direction::Forward
+                            Forward
                         } else {
-                            Direction::Backward
+                            Backward
                         }
                     };
                     let outgoing_lanes = outgoing_segment.get_lanes(outgoing_direction);
@@ -208,8 +210,8 @@ impl Segment {
     }
     pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
         let lanes = match direction {
-            Direction::Forward => &mut self.forward_lanes,
-            Direction::Backward => &mut self.backward_lanes,
+            Forward => &mut self.forward_lanes,
+            Backward => &mut self.backward_lanes,
         };
         let id = lanes.push(SegmentLane::new(direction));
         lanes.get_mut(&id).unwrap()
@@ -219,8 +221,8 @@ impl Segment {
         direction: Direction,
     ) -> &SeqIndexedStore<SegmentLaneRank, SegmentLane> {
         match direction {
-            Direction::Forward => &self.forward_lanes,
-            Direction::Backward => &self.backward_lanes,
+            Forward => &self.forward_lanes,
+            Backward => &self.backward_lanes,
         }
     }
 }
