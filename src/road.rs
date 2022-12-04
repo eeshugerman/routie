@@ -36,14 +36,14 @@ pub struct Segment {
 }
 
 // #[derive(PartialEq, Eq, Hash)]
-pub type QualifiedSegmentLaneId = (SegmentId, Direction, SegmentLaneRank);
+pub type QualifiedSegmentLaneRank = (SegmentId, Direction, SegmentLaneRank);
 
 pub struct Junction {
     pub pos: Pos,
     lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
-    lane_inputs: HashMap<QualifiedSegmentLaneId, HashSet<JunctionLaneId>>,
-    lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneId>,
-    lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneId>,
+    lane_inputs: HashMap<QualifiedSegmentLaneRank, HashSet<JunctionLaneId>>,
+    lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
+    lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
 }
 
 pub struct Network {
@@ -187,8 +187,8 @@ impl Junction {
 
     fn add_lane(
         &mut self,
-        begin: QualifiedSegmentLaneId,
-        end: QualifiedSegmentLaneId,
+        begin: QualifiedSegmentLaneRank,
+        end: QualifiedSegmentLaneRank,
     ) -> &JunctionLane {
         let id = self.lanes.push(JunctionLane::new());
         self.lane_inputs
@@ -274,7 +274,7 @@ impl<'a> JunctionContext<'a> {
     pub fn get_segment_lanes_for_junction_lane(
         &self,
         lane_id: JunctionLaneId,
-    ) -> (QualifiedSegmentLaneId, QualifiedSegmentLaneId) {
+    ) -> (QualifiedSegmentLaneRank, QualifiedSegmentLaneRank) {
         let input_segment_lane = self.itself.lane_inputs_inverse.get(&lane_id).unwrap();
         let output_segment_lane = self.itself.lane_outputs.get(&lane_id).unwrap();
         (*input_segment_lane, *output_segment_lane)
