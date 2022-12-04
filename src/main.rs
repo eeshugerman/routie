@@ -3,13 +3,12 @@ extern crate nalgebra;
 
 #[macro_use]
 mod util;
-mod constants;
-mod error;
 mod actor;
+mod constants;
 mod draw;
+mod error;
 mod road;
 mod spatial;
-
 
 use std::fs::File;
 

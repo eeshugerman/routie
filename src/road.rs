@@ -73,12 +73,7 @@ impl Network {
         let id = self.segments.push(Segment::new());
         self.segment_junctions.insert(id, (begin_id, end_id));
         for junction in [begin_id, end_id].iter() {
-            if !self
-                .junction_segments
-                .entry(*junction)
-                .or_insert(HashSet::new())
-                .insert(id)
-            {
+            if !self.junction_segments.entry(*junction).or_insert(HashSet::new()).insert(id) {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
@@ -129,6 +124,7 @@ impl Network {
                     let (begin_junction_id, end_junction_id) =
                         *self.segment_junctions.get(&incoming_segment_id).unwrap();
                     assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
+                    // damn you rustfmt
                     if junction_id == begin_junction_id {
                         Backward
                     } else {
@@ -186,10 +182,7 @@ impl Junction {
         end: QualifiedSegmentLaneRank,
     ) -> &JunctionLane {
         let id = self.lanes.push(JunctionLane::new());
-        self.lane_inputs
-            .entry(begin)
-            .or_insert(HashSet::new())
-            .insert(id);
+        self.lane_inputs.entry(begin).or_insert(HashSet::new()).insert(id);
         self.lane_inputs_inverse.insert(id, begin);
         self.lane_outputs.insert(id, end);
         self.lanes.get(&id).unwrap()
@@ -229,18 +222,13 @@ impl Segment {
 
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
-        Self {
-            direction,
-            actors: BTreeMap::new(),
-        }
+        Self { direction, actors: BTreeMap::new() }
     }
 }
 
 impl JunctionLane {
     pub fn new() -> Self {
-        Self {
-            actors: BTreeMap::new(),
-        }
+        Self { actors: BTreeMap::new() }
     }
 }
 
@@ -269,11 +257,7 @@ pub struct SegmentLaneContext<'a> {
 
 impl<'a> JunctionContext<'a> {
     pub fn new(network: &'a Network, id: JunctionId, junction: &'a Junction) -> Self {
-        Self {
-            network,
-            id,
-            itself: junction,
-        }
+        Self { network, id, itself: junction }
     }
     pub fn get_segment_lanes_for_junction_lane(
         &self,
@@ -294,20 +278,12 @@ impl<'a> JunctionLaneContext<'a> {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self {
-            junction,
-            id,
-            itself: lane,
-        }
+        Self { junction, id, itself: lane }
     }
 }
 impl<'a> SegmentContext<'a> {
     pub fn new(network: &'a Network, id: SegmentId, segment: &'a Segment) -> Self {
-        Self {
-            network,
-            id,
-            itself: segment,
-        }
+        Self { network, id, itself: segment }
     }
     pub fn get_junctions(&self) -> (JunctionContext, JunctionContext) {
         let (begin_id, end_id) = self
@@ -330,11 +306,6 @@ impl<'a> SegmentLaneContext<'a> {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self {
-            segment,
-            direction,
-            rank,
-            itself: lane,
-        }
+        Self { segment, direction, rank, itself: lane }
     }
 }

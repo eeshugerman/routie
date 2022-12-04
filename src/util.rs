@@ -8,10 +8,7 @@ pub mod seq_indexed_store {
 
     impl<U: From<usize> + Into<usize> + Copy, T> SeqIndexedStore<U, T> {
         pub fn new() -> Self {
-            Self {
-                index_type: PhantomData,
-                data: Vec::new(),
-            }
+            Self { index_type: PhantomData, data: Vec::new() }
         }
         pub fn push(&mut self, val: T) -> U {
             let id = self.data.len();
@@ -29,17 +26,11 @@ pub mod seq_indexed_store {
         }
 
         pub fn enumerate(&self) -> impl Iterator<Item = (U, &T)> {
-            self.data
-                .iter()
-                .enumerate()
-                .map(|val| (U::from(val.0), val.1))
+            self.data.iter().enumerate().map(|val| (U::from(val.0), val.1))
         }
 
-        pub fn enumerate_mut(&mut self) -> impl Iterator<Item = (U, &mut T)>{
-            self.data
-                .iter_mut()
-                .enumerate()
-                .map(|val| (U::from(val.0), val.1))
+        pub fn enumerate_mut(&mut self) -> impl Iterator<Item = (U, &mut T)> {
+            self.data.iter_mut().enumerate().map(|val| (U::from(val.0), val.1))
         }
     }
 

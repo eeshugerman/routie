@@ -25,10 +25,7 @@ impl Artist<'_> {
         cairo_ctx.scale(IMAGE_SIZE as f64, IMAGE_SIZE as f64);
         cairo_ctx.set_line_width(0.01);
         cairo_ctx.set_source_rgb(0.0, 0.0, 0.0);
-        Artist {
-            road_network,
-            cairo_ctx,
-        }
+        Artist { road_network, cairo_ctx }
     }
 
     fn draw_polylines<const N: usize>(&self, points: [Point2<f64>; N]) {
@@ -64,7 +61,12 @@ impl Artist<'_> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        self.draw_regular_polygon(junction_ctx.itself.pos, 4, ROAD_JUNCTION_RADIUS * f64::sqrt(2.0), FRAC_PI_4);
+        self.draw_regular_polygon(
+            junction_ctx.itself.pos,
+            4,
+            ROAD_JUNCTION_RADIUS * f64::sqrt(2.0),
+            FRAC_PI_4,
+        );
         self.cairo_ctx.stroke().unwrap();
 
         for (id, lane) in junction_ctx.itself.enumerate_lanes() {

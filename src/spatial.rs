@@ -9,7 +9,7 @@ use crate::{
     road::{
         self,
         Direction::{Backward, Forward},
-        SegmentLaneContext, QualifiedSegmentLaneRank,
+        QualifiedSegmentLaneRank, SegmentLaneContext,
     },
 };
 
@@ -97,23 +97,16 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
         match self.itself.direction {
-            Backward => (
-                segment_end_pos + v_lat_offset,
-                segment_begin_pos + v_lat_offset,
-            ),
-            Forward => (
-                segment_begin_pos + v_lat_offset,
-                segment_end_pos + v_lat_offset,
-            ),
+            Backward => (segment_end_pos + v_lat_offset, segment_begin_pos + v_lat_offset),
+            Forward => (segment_begin_pos + v_lat_offset, segment_end_pos + v_lat_offset),
         }
     }
 }
 
 impl<'a> road::JunctionLaneContext<'a> {
     pub fn get_pos(&self) -> (Pos, Pos) {
-        let (input_segment_lane, output_segment_lane) = self
-            .junction
-            .get_segment_lanes_for_junction_lane(self.id);
+        let (input_segment_lane, output_segment_lane) =
+            self.junction.get_segment_lanes_for_junction_lane(self.id);
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
             let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();

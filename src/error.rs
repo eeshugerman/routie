@@ -12,7 +12,7 @@ pub enum RoutieError {
 #[derive(Debug)]
 pub enum GenericError {
     Routie(RoutieError),
-    Cairo(CairoError)
+    Cairo(CairoError),
 }
 
 impl From<RoutieError> for GenericError {
