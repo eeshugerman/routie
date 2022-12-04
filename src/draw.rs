@@ -50,12 +50,27 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(start.x, start.y);
     }
 
+    fn draw_road_junction_lane_segment(&self, lane_ctx: &road::JunctionLaneContext) {
+        let (red, green, blue) = ROAD_LANE_COLOR;
+        self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
+        let (begin_pos, end_pos) = lane_ctx.get_pos();
+        self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
+        self.cairo_ctx.line_to(end_pos.x, end_pos.y);
+        self.cairo_ctx.stroke().unwrap();
+    }
+
     fn draw_road_junction(&self, junction_ctx: &road::JunctionContext) {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        self.draw_regular_polygon(junction_ctx.itself.pos, 4, ROAD_JUNCTION_RADIUS, FRAC_PI_4);
-        self.cairo_ctx.fill().unwrap();
+        // TODO: use draw_polylines 
+        self.draw_regular_polygon(junction_ctx.itself.pos, 4, ROAD_JUNCTION_RADIUS * f64::sqrt(2.0), FRAC_PI_4);
+        self.cairo_ctx.stroke().unwrap();
+
+        // for (id, lane) in junction_ctx.itself.lanes.enumerate() {
+        //     self.draw_road_junction_lane(&road::JunctionLaneContext::new(junction_ctx, id, lane))
+        // }
     }
 
     fn draw_road_segment_lane(&self, lane_ctx: &road::SegmentLaneContext) {

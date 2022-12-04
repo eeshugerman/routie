@@ -44,6 +44,7 @@ pub struct Junction {
     pub pos: Pos,
     lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
     lane_inputs: HashMap<QualifiedSegmentLaneId, HashSet<JunctionLaneId>>,
+    lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneId>,
     lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneId>,
 }
 
@@ -95,15 +96,10 @@ impl Network {
     pub fn get_segment_junctions(
         &self,
         segment: SegmentId,
-    ) -> Result<(&Junction, &Junction), RoutieError> {
+    ) -> Result<(JunctionId, JunctionId), RoutieError> {
         match self.segment_junctions.get(&segment) {
             None => Err(RoutieError::InvalidId),
-            Some((begin_id, end_id)) => {
-                match (self.junctions.get(*begin_id), self.junctions.get(*end_id)) {
-                    (Some(begin), Some(end)) => Ok((begin, end)),
-                    (_, _) => Err(RoutieError::InvalidId),
-                }
-            }
+            Some((begin_id, end_id)) => Ok((*begin_id, *end_id)),
         }
     }
 
@@ -158,6 +154,7 @@ impl Junction {
             pos,
             lanes: SeqIndexedStore::new(),
             lane_inputs: HashMap::new(),
+            lane_inputs_inverse: HashMap::new(),
             lane_outputs: HashMap::new(),
         }
     }
@@ -172,8 +169,18 @@ impl Junction {
             .entry(begin)
             .or_insert(HashSet::new())
             .insert(id);
+        self.lane_inputs_inverse.insert(id, begin);
         self.lane_outputs.insert(id, end);
         self.lanes.get(id).unwrap()
+    }
+
+    pub fn get_segment_lanes_for_junction_lane(
+        &self,
+        lane_id: JunctionLaneId,
+    ) -> (QualifiedSegmentLaneId, QualifiedSegmentLaneId) {
+        let input_segment_lane = self.lane_inputs_inverse.get(&lane_id).unwrap();
+        let output_segment_lane = self.lane_outputs.get(&lane_id).unwrap();
+        (*input_segment_lane, *output_segment_lane)
     }
 }
 
@@ -217,6 +224,12 @@ pub struct JunctionContext<'a> {
     pub id: JunctionId,
     pub itself: &'a Junction,
 }
+pub struct JunctionLaneContext<'a> {
+    pub junction: &'a JunctionContext<'a>,
+    pub id: JunctionLaneId,
+    pub itself: &'a JunctionLane,
+}
+
 pub struct SegmentContext<'a> {
     pub network: &'a Network,
     pub id: SegmentId,
@@ -238,6 +251,23 @@ impl<'a> JunctionContext<'a> {
         }
     }
 }
+impl<'a> JunctionLaneContext<'a> {
+    pub fn new(
+        junction: &'a JunctionContext<'a>,
+        id: JunctionLaneId,
+        lane: &'a JunctionLane,
+    ) -> Self {
+        assert!(match junction.itself.lanes.get(id) {
+            None => false,
+            Some(context_lane) => lane as *const _ == context_lane as *const _,
+        });
+        Self {
+            junction,
+            id,
+            itself: lane,
+        }
+    }
+}
 impl<'a> SegmentContext<'a> {
     pub fn new(network: &'a Network, id: SegmentId, segment: &'a Segment) -> Self {
         Self {
@@ -245,6 +275,14 @@ impl<'a> SegmentContext<'a> {
             id,
             itself: segment,
         }
+    }
+    pub fn get_junctions(&self) -> (&Junction, &Junction) {
+        let (begin_id, end_id) = self
+            .network
+            .get_segment_junctions(self.id)
+            .expect(format!("Unlinked segment {:?}", self.id).as_str());
+        let id_to_junc = |id| self.network.get_junctions().get(id).unwrap();
+        (id_to_junc(begin_id), id_to_junc(end_id))
     }
 }
 impl<'a> SegmentLaneContext<'a> {
@@ -268,8 +306,5 @@ impl<'a> SegmentLaneContext<'a> {
             rank,
             itself: lane,
         }
-    }
-    pub fn get_qualified_id(self) -> QualifiedSegmentLaneId {
-        (self.segment.id, self.direction, self.rank)
     }
 }

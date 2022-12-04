@@ -3,10 +3,12 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
-    constants::{ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
+    constants::{
+        ROAD_JUNCTION_COLOR, ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT,
+    },
     road::{
         self,
-        Direction::{Backward, Forward},
+        Direction::{Backward, Forward}, SegmentLaneContext,
     },
 };
 
@@ -50,12 +52,17 @@ impl<'a> LineLike for road::SegmentContext<'a> {
             * std::cmp::max(total_lane_count, 1) as f64
     }
 
+    fn get_v_norm(&self) -> Vector {
+        let (begin_junction, end_junction) = self.get_junctions();
+        (end_junction.pos - begin_junction.pos).normalize()
+    }
+
     fn get_pos(&self) -> (Pos, Pos) {
-        let (begin_junction, end_junction) = self
-            .network
-            .get_segment_junctions(self.id)
-            .expect(format!("Unlinked segment {:?}", self.id).as_str());
-        (begin_junction.pos, end_junction.pos)
+        let (begin_junction, end_junction) = self.get_junctions();
+        (
+            begin_junction.pos + (ROAD_JUNCTION_RADIUS * self.get_v_norm()),
+            end_junction.pos + (-1.0 * ROAD_JUNCTION_RADIUS * self.get_v_norm()),
+        )
     }
 }
 
@@ -72,7 +79,7 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
     }
     fn get_pos(&self) -> (Pos, Pos) {
         let (segment_begin_pos, segment_end_pos) = self.segment.get_pos();
-        let v_offset = {
+        let v_lat_offset = {
             let rank: i32 = self.rank.into();
             let lane_count_from_edge = match self.itself.direction {
                 Backward => self.segment.itself.backward_lanes.len() as i32 - rank - 1,
@@ -89,8 +96,39 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
         match self.itself.direction {
-            Backward => (segment_end_pos + v_offset, segment_begin_pos + v_offset),
-            Forward => (segment_begin_pos + v_offset, segment_end_pos + v_offset),
+            Backward => (
+                segment_end_pos + v_lat_offset,
+                segment_begin_pos + v_lat_offset,
+            ),
+            Forward => (
+                segment_begin_pos + v_lat_offset,
+                segment_end_pos + v_lat_offset,
+            ),
         }
+    }
+}
+
+impl<'a> road::JunctionLaneContext<'a> {
+    fn get_pos(&self) -> (Pos, Pos) {
+        let (input_segment_lane, output_segment_lane) = self
+            .junction
+            .itself
+            .get_segment_lanes_for_junction_lane(self.id);
+        // TODO: determine which end of we want for each segment_lane
+        let (input_segment_lane_segment_id, _, _) = input_segment_lane;
+        let (output_segment_lane_segment_id, _, _) = output_segment_lane;
+        let input_segment_lane = self
+            .junction
+            .network
+            .get_segments().get(input_segment_lane_segment_id).unwrap();
+        let output_segment_lane = self
+            .junction
+            .network
+            .get_segments().get(output_segment_lane_segment_id).unwrap();
+
+
+        let begin_pos = input_segment_lane_ctx.get_pos().1;
+        let end_pos = output_segment_lane_ctx.get_pos().0;
+        (begin_pos, end_pos)
     }
 }
