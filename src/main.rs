@@ -42,6 +42,8 @@ fn main() {
     let l6 = s3.add_lane(road::Direction::Forward);
 
     let s4 = network.add_segment(j2, j4);
+    // let l7 = s4.add_lane(road::Direction::Backward);
+    // let l8 = s4.add_lane(road::Direction::Forward);
 
     network.connect_junctions();
 

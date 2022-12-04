@@ -1,7 +1,5 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use cairo::glib::FormatSizeFlags;
-
 use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
 
 #[derive(Debug)]
@@ -49,8 +47,8 @@ pub struct Junction {
 }
 
 pub struct Network {
-    junctions: SeqIndexedStore<JunctionId, Junction>,
-    segments: SeqIndexedStore<SegmentId, Segment>,
+    pub junctions: SeqIndexedStore<JunctionId, Junction>,
+    pub segments: SeqIndexedStore<SegmentId, Segment>,
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
@@ -85,14 +83,6 @@ impl Network {
         self.segments.get_mut(id).unwrap()
     }
 
-    pub fn get_junctions(&self) -> &SeqIndexedStore<JunctionId, Junction> {
-        &self.junctions
-    }
-
-    pub fn get_segments(&self) -> &SeqIndexedStore<SegmentId, Segment> {
-        &self.segments
-    }
-
     pub fn get_segment_junctions(
         &self,
         segment: SegmentId,
@@ -100,6 +90,26 @@ impl Network {
         match self.segment_junctions.get(&segment) {
             None => Err(RoutieError::InvalidId),
             Some((begin_id, end_id)) => Ok((*begin_id, *end_id)),
+        }
+    }
+
+    pub fn get_segment_context(
+        &self,
+        segment_id: SegmentId,
+    ) -> Result<SegmentContext, RoutieError> {
+        match self.segments.get(segment_id) {
+            None => Err(RoutieError::InvalidId),
+            Some(segment) => Ok(SegmentContext::new(&self, segment_id, segment)),
+        }
+    }
+
+    pub fn get_junction_context(
+        &self,
+        junction_id: JunctionId,
+    ) -> Result<JunctionContext, RoutieError> {
+        match self.junctions.get(junction_id) {
+            None => Err(RoutieError::InvalidId),
+            Some(junction) => Ok(JunctionContext::new(&self, junction_id, junction)),
         }
     }
 
@@ -113,27 +123,43 @@ impl Network {
             };
             for incoming_segment_id in segment_ids {
                 let incoming_segment = self.segments.get(*incoming_segment_id).unwrap();
-                let (begin_junction_id, end_junction_id) =
-                    *self.segment_junctions.get(&incoming_segment_id).unwrap();
-                assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
-                let (incoming_direction, outgoing_direction) = if junction_id == begin_junction_id {
-                    (Direction::Backward, Direction::Forward)
-                } else {
-                    (Direction::Forward, Direction::Backward)
+                let incoming_direction = {
+                    let (begin_junction_id, end_junction_id) =
+                        *self.segment_junctions.get(&incoming_segment_id).unwrap();
+                    assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
+                    if junction_id == begin_junction_id {
+                        Direction::Backward
+                    } else {
+                        Direction::Forward
+                    }
                 };
-                let incoming_lanes = match incoming_direction {
-                    Direction::Backward => &incoming_segment.backward_lanes,
-                    Direction::Forward => &incoming_segment.forward_lanes,
+                let incoming_lanes = {
+                    match incoming_direction {
+                        Direction::Backward => &incoming_segment.backward_lanes,
+                        Direction::Forward => &incoming_segment.forward_lanes,
+                    }
                 };
                 for outgoing_segment_id in segment_ids {
                     if incoming_segment_id == outgoing_segment_id {
                         continue;
                     }
                     let outgoing_segment = self.segments.get(*outgoing_segment_id).unwrap();
+                    let outgoing_direction = {
+                        let (begin_junction_id, end_junction_id) =
+                            *self.segment_junctions.get(&outgoing_segment_id).unwrap();
+                        assert!(junction_id == begin_junction_id || junction_id == end_junction_id);
+                        if junction_id == begin_junction_id {
+                            Direction::Forward
+                        } else {
+                            Direction::Backward
+                        }
+                    };
                     let outgoing_lanes = &match outgoing_direction {
                         Direction::Backward => &outgoing_segment.backward_lanes,
                         Direction::Forward => &outgoing_segment.forward_lanes,
                     };
+
+                    // connect by rank //
                     for ((incoming_lane_rank, _), (outgoing_lane_rank, _)) in
                         std::iter::zip(incoming_lanes.enumerate(), outgoing_lanes.enumerate())
                     {
@@ -174,13 +200,8 @@ impl Junction {
         self.lanes.get(id).unwrap()
     }
 
-    pub fn get_segment_lanes_for_junction_lane(
-        &self,
-        lane_id: JunctionLaneId,
-    ) -> (QualifiedSegmentLaneId, QualifiedSegmentLaneId) {
-        let input_segment_lane = self.lane_inputs_inverse.get(&lane_id).unwrap();
-        let output_segment_lane = self.lane_outputs.get(&lane_id).unwrap();
-        (*input_segment_lane, *output_segment_lane)
+    pub fn enumerate_lanes(&self) -> impl Iterator<Item = (JunctionLaneId, &JunctionLane)> {
+        self.lanes.enumerate()
     }
 }
 
@@ -250,6 +271,14 @@ impl<'a> JunctionContext<'a> {
             itself: junction,
         }
     }
+    pub fn get_segment_lanes_for_junction_lane(
+        &self,
+        lane_id: JunctionLaneId,
+    ) -> (QualifiedSegmentLaneId, QualifiedSegmentLaneId) {
+        let input_segment_lane = self.itself.lane_inputs_inverse.get(&lane_id).unwrap();
+        let output_segment_lane = self.itself.lane_outputs.get(&lane_id).unwrap();
+        (*input_segment_lane, *output_segment_lane)
+    }
 }
 impl<'a> JunctionLaneContext<'a> {
     pub fn new(
@@ -276,12 +305,12 @@ impl<'a> SegmentContext<'a> {
             itself: segment,
         }
     }
-    pub fn get_junctions(&self) -> (&Junction, &Junction) {
+    pub fn get_junctions(&self) -> (JunctionContext, JunctionContext) {
         let (begin_id, end_id) = self
             .network
             .get_segment_junctions(self.id)
             .expect(format!("Unlinked segment {:?}", self.id).as_str());
-        let id_to_junc = |id| self.network.get_junctions().get(id).unwrap();
+        let id_to_junc = |id| self.network.get_junction_context(id).unwrap();
         (id_to_junc(begin_id), id_to_junc(end_id))
     }
 }

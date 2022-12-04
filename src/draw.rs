@@ -50,7 +50,7 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(start.x, start.y);
     }
 
-    fn draw_road_junction_lane_segment(&self, lane_ctx: &road::JunctionLaneContext) {
+    fn draw_road_junction_lane(&self, lane_ctx: &road::JunctionLaneContext) {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
@@ -64,13 +64,12 @@ impl Artist<'_> {
         let (red, green, blue) = ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        // TODO: use draw_polylines 
         self.draw_regular_polygon(junction_ctx.itself.pos, 4, ROAD_JUNCTION_RADIUS * f64::sqrt(2.0), FRAC_PI_4);
         self.cairo_ctx.stroke().unwrap();
 
-        // for (id, lane) in junction_ctx.itself.lanes.enumerate() {
-        //     self.draw_road_junction_lane(&road::JunctionLaneContext::new(junction_ctx, id, lane))
-        // }
+        for (id, lane) in junction_ctx.itself.enumerate_lanes() {
+            self.draw_road_junction_lane(&road::JunctionLaneContext::new(junction_ctx, id, lane))
+        }
     }
 
     fn draw_road_segment_lane(&self, lane_ctx: &road::SegmentLaneContext) {
@@ -119,10 +118,10 @@ impl Artist<'_> {
     }
 
     pub fn draw_road_network(&self) {
-        for (id, segment) in self.road_network.get_segments().enumerate() {
+        for (id, segment) in self.road_network.segments.enumerate() {
             self.draw_road_segment(&road::SegmentContext::new(self.road_network, id, segment));
         }
-        for (id, junction) in self.road_network.get_junctions().enumerate() {
+        for (id, junction) in self.road_network.junctions.enumerate() {
             self.draw_road_junction(&road::JunctionContext::new(self.road_network, id, junction));
         }
     }
