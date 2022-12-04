@@ -62,14 +62,14 @@ impl Artist<'_> {
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
         self.draw_regular_polygon(
-            junction_ctx.itself.pos,
+            junction_ctx.wrapped.pos,
             4,
             ROAD_JUNCTION_RADIUS * f64::sqrt(2.0),
             FRAC_PI_4,
         );
         self.cairo_ctx.stroke().unwrap();
 
-        for (id, lane) in junction_ctx.itself.enumerate_lanes() {
+        for (id, lane) in junction_ctx.wrapped.enumerate_lanes() {
             self.draw_road_junction_lane(&road::JunctionLaneContext::new(junction_ctx, id, lane))
         }
     }
@@ -101,7 +101,7 @@ impl Artist<'_> {
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke().unwrap();
 
-        for (rank, lane) in segment_ctx.itself.forward_lanes.enumerate() {
+        for (rank, lane) in segment_ctx.wrapped.forward_lanes.enumerate() {
             self.draw_road_segment_lane(&road::SegmentLaneContext::new(
                 segment_ctx,
                 road::Direction::Forward,
@@ -109,7 +109,7 @@ impl Artist<'_> {
                 lane,
             ));
         }
-        for (rank, lane) in segment_ctx.itself.backward_lanes.enumerate() {
+        for (rank, lane) in segment_ctx.wrapped.backward_lanes.enumerate() {
             self.draw_road_segment_lane(&road::SegmentLaneContext::new(
                 segment_ctx,
                 road::Direction::Backward,

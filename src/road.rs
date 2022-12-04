@@ -239,36 +239,36 @@ impl JunctionLane {
 pub struct JunctionContext<'a> {
     pub network: &'a Network,
     pub id: JunctionId,
-    pub itself: &'a Junction,
+    pub wrapped: &'a Junction,
 }
 pub struct JunctionLaneContext<'a> {
     pub junction: &'a JunctionContext<'a>,
     pub id: JunctionLaneId,
-    pub itself: &'a JunctionLane,
+    pub wrapped: &'a JunctionLane,
 }
 
 pub struct SegmentContext<'a> {
     pub network: &'a Network,
     pub id: SegmentId,
-    pub itself: &'a Segment,
+    pub wrapped: &'a Segment,
 }
 pub struct SegmentLaneContext<'a> {
     pub segment: &'a SegmentContext<'a>,
     pub direction: Direction,
     pub rank: SegmentLaneRank,
-    pub itself: &'a SegmentLane,
+    pub wrapped: &'a SegmentLane,
 }
 
 impl<'a> JunctionContext<'a> {
     pub fn new(network: &'a Network, id: JunctionId, junction: &'a Junction) -> Self {
-        Self { network, id, itself: junction }
+        Self { network, id, wrapped: junction }
     }
     pub fn get_segment_lanes_for_junction_lane(
         &self,
         lane_id: JunctionLaneId,
     ) -> (QualifiedSegmentLaneRank, QualifiedSegmentLaneRank) {
-        let input_segment_lane = self.itself.lane_inputs_inverse.get(&lane_id).unwrap();
-        let output_segment_lane = self.itself.lane_outputs.get(&lane_id).unwrap();
+        let input_segment_lane = self.wrapped.lane_inputs_inverse.get(&lane_id).unwrap();
+        let output_segment_lane = self.wrapped.lane_outputs.get(&lane_id).unwrap();
         (*input_segment_lane, *output_segment_lane)
     }
 }
@@ -278,16 +278,16 @@ impl<'a> JunctionLaneContext<'a> {
         id: JunctionLaneId,
         lane: &'a JunctionLane,
     ) -> Self {
-        assert!(match junction.itself.lanes.get(&id) {
+        assert!(match junction.wrapped.lanes.get(&id) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self { junction, id, itself: lane }
+        Self { junction, id, wrapped: lane }
     }
 }
 impl<'a> SegmentContext<'a> {
     pub fn new(network: &'a Network, id: SegmentId, segment: &'a Segment) -> Self {
-        Self { network, id, itself: segment }
+        Self { network, id, wrapped: segment }
     }
     pub fn get_junctions(&self) -> (JunctionContext, JunctionContext) {
         let (begin_id, end_id) = self
@@ -305,11 +305,11 @@ impl<'a> SegmentLaneContext<'a> {
         rank: SegmentLaneRank,
         lane: &'a SegmentLane,
     ) -> Self {
-        let context_lanes = segment.itself.get_lanes(direction);
+        let context_lanes = segment.wrapped.get_lanes(direction);
         assert!(match context_lanes.get(&rank) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self { segment, direction, rank, itself: lane }
+        Self { segment, direction, rank, wrapped: lane }
     }
 }
