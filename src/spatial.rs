@@ -1,11 +1,11 @@
 use std::f64::consts::{FRAC_PI_2, PI};
 
+use lyon_geom::QuadraticBezierSegment;
+// TODO: use lyon_geom stuff instead
 use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
-    constants::{
-        ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT,
-    },
+    constants::{ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
     road::{
         self,
         Direction::{Backward, Forward},
@@ -116,5 +116,36 @@ impl<'a> road::JunctionLaneContext<'a> {
         let (_, begin_pos) = to_pos(input_segment_lane);
         let (end_pos, _) = to_pos(output_segment_lane);
         (begin_pos, end_pos)
+    }
+
+    // TODO: memoize
+    pub fn get_curve(&self) -> QuadraticBezierSegment<f64> {
+        let to_lyon_point = |p: Pos| lyon_geom::Point::new(p.x, p.y);
+        let to_lyon_vector = |v: Vector| lyon_geom::Vector::new(v.x, v.y);
+        let to_line = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
+            let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
+            let segment_lane = segment_ctx.wrapped.get_lanes(direction).get(&rank).unwrap();
+            let segment_lane_ctx =
+                SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane);
+            lyon_geom::Line {
+                point: to_lyon_point(segment_lane_ctx.get_pos().0),
+                vector: to_lyon_vector(segment_lane_ctx.get_v()),
+            }
+        };
+
+        let (begin_pos, end_pos) = self.get_pos();
+        let (input_segment_lane, output_segment_lane) =
+            self.junction.get_segment_lanes_for_junction_lane(self.id);
+        let input_lane_line = to_line(input_segment_lane);
+        let output_lane_line = to_line(output_segment_lane);
+        let intersect_pos = match input_lane_line.intersection(&output_lane_line) {
+            None => begin_pos + 0.5 * (end_pos - begin_pos),
+            Some(p) => Pos::new(p.x, p.y)
+        };
+        QuadraticBezierSegment {
+            from: to_lyon_point(begin_pos),
+            ctrl: to_lyon_point(intersect_pos),
+            to: to_lyon_point(end_pos),
+        }
     }
 }

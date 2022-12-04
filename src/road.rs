@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use lyon_geom::quadratic_bezier::QuadraticBezierSegment;
+
 use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
 
 #[derive(Debug)]
@@ -30,6 +32,7 @@ pub struct SegmentLane {
 pub struct JunctionLane {
     #[allow(dead_code)]
     actors: BTreeMap<PosParam, Actor>,
+    // curve: QuadraticBezierSegment<f64>
 }
 
 pub struct Segment {

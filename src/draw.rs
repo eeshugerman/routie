@@ -2,6 +2,7 @@ use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::{FRAC_PI_4, PI};
 
 use cairo::{Context, ImageSurface};
+use lyon_geom::CubicBezierSegment;
 use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::constants::{
@@ -51,9 +52,9 @@ impl Artist<'_> {
         let (red, green, blue) = ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
-        let (begin_pos, end_pos) = lane_ctx.get_pos();
-        self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
-        self.cairo_ctx.line_to(end_pos.x, end_pos.y);
+        let CubicBezierSegment{ from, ctrl1, ctrl2, to} = lane_ctx.get_curve().to_cubic();
+        self.cairo_ctx.move_to(from.x, from.y);
+        self.cairo_ctx.curve_to(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
         self.cairo_ctx.stroke().unwrap();
     }
 
