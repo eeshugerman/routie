@@ -95,11 +95,12 @@ impl Network {
 
     pub fn connect_junctions(&mut self) {
         for (junction_id, junction) in self.junctions.enumerate_mut() {
-            let segment_ids = if let Some(ids) = self.junction_segments.get(&junction_id) {
-                ids
-            } else {
-                log::warn!("Junction has no linked segments");
-                return;
+            let segment_ids = match self.junction_segments.get(&junction_id) {
+                Some(ids) => ids,
+                None => {
+                    log::warn!("Junction has no linked segments");
+                    continue;
+                }
             };
             for incoming_segment_id in segment_ids {
                 let incoming_segment = self.segments.get(incoming_segment_id).unwrap();
