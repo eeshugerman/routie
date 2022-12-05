@@ -1,7 +1,5 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use lyon_geom::quadratic_bezier::QuadraticBezierSegment;
-
 use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
 
 #[derive(Debug)]
@@ -43,7 +41,6 @@ pub struct Segment {
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
 
-// #[derive(PartialEq, Eq, Hash)]
 pub type QualifiedSegmentLaneRank = (SegmentId, Direction, SegmentLaneRank);
 
 pub struct Junction {
@@ -242,36 +239,36 @@ impl JunctionLane {
 pub struct JunctionContext<'a> {
     pub network: &'a Network,
     pub id: JunctionId,
-    pub wrapped: &'a Junction,
+    pub junction: &'a Junction,
 }
 pub struct JunctionLaneContext<'a> {
     pub junction: &'a JunctionContext<'a>,
     pub id: JunctionLaneId,
-    pub wrapped: &'a JunctionLane,
+    pub lane: &'a JunctionLane,
 }
 
 pub struct SegmentContext<'a> {
     pub network: &'a Network,
     pub id: SegmentId,
-    pub wrapped: &'a Segment,
+    pub segment: &'a Segment,
 }
 pub struct SegmentLaneContext<'a> {
-    pub segment: &'a SegmentContext<'a>,
+    pub segment_ctx: &'a SegmentContext<'a>,
     pub direction: Direction,
     pub rank: SegmentLaneRank,
-    pub wrapped: &'a SegmentLane,
+    pub lane: &'a SegmentLane,
 }
 
 impl<'a> JunctionContext<'a> {
     pub fn new(network: &'a Network, id: JunctionId, junction: &'a Junction) -> Self {
-        Self { network, id, wrapped: junction }
+        Self { network, id, junction }
     }
     pub fn get_segment_lanes_for_junction_lane(
         &self,
         lane_id: JunctionLaneId,
     ) -> (QualifiedSegmentLaneRank, QualifiedSegmentLaneRank) {
-        let input_segment_lane = self.wrapped.lane_inputs_inverse.get(&lane_id).unwrap();
-        let output_segment_lane = self.wrapped.lane_outputs.get(&lane_id).unwrap();
+        let input_segment_lane = self.junction.lane_inputs_inverse.get(&lane_id).unwrap();
+        let output_segment_lane = self.junction.lane_outputs.get(&lane_id).unwrap();
         (*input_segment_lane, *output_segment_lane)
     }
 }
@@ -281,38 +278,35 @@ impl<'a> JunctionLaneContext<'a> {
         id: JunctionLaneId,
         lane: &'a JunctionLane,
     ) -> Self {
-        assert!(match junction.wrapped.lanes.get(&id) {
+        assert!(match junction.junction.lanes.get(&id) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self { junction, id, wrapped: lane }
+        Self { junction, id, lane }
     }
 }
 impl<'a> SegmentContext<'a> {
     pub fn new(network: &'a Network, id: SegmentId, segment: &'a Segment) -> Self {
-        Self { network, id, wrapped: segment }
+        Self { network, id, segment }
     }
     pub fn get_junctions(&self) -> (JunctionContext, JunctionContext) {
-        let (begin_id, end_id) = self
-            .network
-            .get_segment_junctions(self.id)
-            .expect(format!("Unlinked segment {:?}", self.id).as_str());
+        let (begin_id, end_id) = self.network.get_segment_junctions(self.id).unwrap();
         let id_to_junc = |id| self.network.get_junction_context(id).unwrap();
         (id_to_junc(begin_id), id_to_junc(end_id))
     }
 }
 impl<'a> SegmentLaneContext<'a> {
     pub fn new(
-        segment: &'a SegmentContext<'a>,
+        segment_ctx: &'a SegmentContext<'a>,
         direction: Direction,
         rank: SegmentLaneRank,
         lane: &'a SegmentLane,
     ) -> Self {
-        let context_lanes = segment.wrapped.get_lanes(direction);
+        let context_lanes = segment_ctx.segment.get_lanes(direction);
         assert!(match context_lanes.get(&rank) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self { segment, direction, rank, wrapped: lane }
+        Self { segment_ctx, direction, rank, lane }
     }
 }

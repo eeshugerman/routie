@@ -22,7 +22,7 @@ pub trait PointLike {
 
 impl<'a> PointLike for road::JunctionContext<'a> {
     fn get_pos(&self) -> Pos {
-        self.wrapped.pos
+        self.junction.pos
     }
 }
 
@@ -47,22 +47,22 @@ pub trait LineLike {
 
 impl<'a> LineLike for road::SegmentContext<'a> {
     fn get_width(&self) -> f64 {
-        let total_lane_count = self.wrapped.forward_lanes.len() + self.wrapped.backward_lanes.len();
+        let total_lane_count = self.segment.forward_lanes.len() + self.segment.backward_lanes.len();
         (1.0 + (ROAD_SEGMENT_WIGGLE_ROOM_PCT as f64 / 100.0))
             * ROAD_LANE_WIDTH
             * std::cmp::max(total_lane_count, 1) as f64
     }
 
     fn get_v_norm(&self) -> Vector {
-        let (begin_junction, end_junction) = self.get_junctions();
-        (end_junction.wrapped.pos - begin_junction.wrapped.pos).normalize()
+        let (begin_junction_ctx, end_junction_ctx) = self.get_junctions();
+        (end_junction_ctx.junction.pos - begin_junction_ctx.junction.pos).normalize()
     }
 
     fn get_pos(&self) -> (Pos, Pos) {
-        let (begin_junction, end_junction) = self.get_junctions();
+        let (begin_junction_ctx, end_junction_ctx) = self.get_junctions();
         (
-            begin_junction.wrapped.pos + (ROAD_JUNCTION_RADIUS * self.get_v_norm()),
-            end_junction.wrapped.pos + (-1.0 * ROAD_JUNCTION_RADIUS * self.get_v_norm()),
+            begin_junction_ctx.junction.pos + (ROAD_JUNCTION_RADIUS * self.get_v_norm()),
+            end_junction_ctx.junction.pos + (-1.0 * ROAD_JUNCTION_RADIUS * self.get_v_norm()),
         )
     }
 }
@@ -72,31 +72,31 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
         ROAD_LANE_WIDTH
     }
     fn get_v(&self) -> Vector {
-        let rot = Rotation2::new(match self.wrapped.direction {
+        let rot = Rotation2::new(match self.lane.direction {
             Backward => PI,
             Forward => 0.0,
         });
-        rot * self.segment.get_v()
+        rot * self.segment_ctx.get_v()
     }
     fn get_pos(&self) -> (Pos, Pos) {
-        let (segment_begin_pos, segment_end_pos) = self.segment.get_pos();
+        let (segment_begin_pos, segment_end_pos) = self.segment_ctx.get_pos();
         let v_lat_offset = {
             let rank: i32 = self.rank.into();
-            let lane_count_from_edge = match self.wrapped.direction {
-                Backward => self.segment.wrapped.backward_lanes.len() as i32 - rank - 1,
-                Forward => self.segment.wrapped.backward_lanes.len() as i32 + rank,
+            let lane_count_from_edge = match self.lane.direction {
+                Backward => self.segment_ctx.segment.backward_lanes.len() as i32 - rank - 1,
+                Forward => self.segment_ctx.segment.backward_lanes.len() as i32 + rank,
             };
-            let v_ortho = self.segment.get_v_ortho();
+            let v_ortho = self.segment_ctx.get_v_ortho();
             let v_segment_edge = (-0.5)
                 * ROAD_LANE_WIDTH
-                * (self.segment.wrapped.backward_lanes.len()
-                    + self.segment.wrapped.forward_lanes.len()) as f64
+                * (self.segment_ctx.segment.backward_lanes.len()
+                    + self.segment_ctx.segment.forward_lanes.len()) as f64
                 * v_ortho;
             let v_lane_edge =
                 v_segment_edge + (lane_count_from_edge as f64 * ROAD_LANE_WIDTH * v_ortho);
             v_lane_edge + (0.5 * ROAD_LANE_WIDTH * v_ortho)
         };
-        match self.wrapped.direction {
+        match self.lane.direction {
             Backward => (segment_end_pos + v_lat_offset, segment_begin_pos + v_lat_offset),
             Forward => (segment_begin_pos + v_lat_offset, segment_end_pos + v_lat_offset),
         }
@@ -110,7 +110,7 @@ impl<'a> road::JunctionLaneContext<'a> {
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
             let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
-            let segment_lane = segment_ctx.wrapped.get_lanes(direction).get(&rank).unwrap();
+            let segment_lane = segment_ctx.segment.get_lanes(direction).get(&rank).unwrap();
             SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane).get_pos()
         };
         let (_, begin_pos) = to_pos(input_segment_lane);
@@ -124,7 +124,7 @@ impl<'a> road::JunctionLaneContext<'a> {
         let to_lyon_vector = |v: Vector| lyon_geom::Vector::new(v.x, v.y);
         let to_line = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
             let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
-            let segment_lane = segment_ctx.wrapped.get_lanes(direction).get(&rank).unwrap();
+            let segment_lane = segment_ctx.segment.get_lanes(direction).get(&rank).unwrap();
             let segment_lane_ctx =
                 SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane);
             lyon_geom::Line {
