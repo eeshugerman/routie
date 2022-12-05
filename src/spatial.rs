@@ -9,7 +9,7 @@ use crate::{
     road::{
         self,
         Direction::{Backward, Forward},
-        QualifiedSegmentLaneRank, SegmentLaneContext,
+        QualifiedSegmentLaneRank, SegmentContext, SegmentLaneContext,
     },
 };
 
@@ -109,13 +109,14 @@ impl<'a> road::JunctionLaneContext<'a> {
             self.junction.get_segment_lanes_for_junction_lane(self.id);
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
-            let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
-            let segment_lane = segment_ctx.segment.get_lanes(direction).get(&rank).unwrap();
+            let segment = self.junction.network.segments.get(&segment_id).unwrap();
+            let segment_ctx = SegmentContext::new(self.junction.network, segment_id, segment);
+            let segment_lane = segment.get_lanes(direction).get(&rank).unwrap();
             SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane).get_pos()
         };
-        let (_, begin_pos) = to_pos(input_segment_lane);
-        let (end_pos, _) = to_pos(output_segment_lane);
-        (begin_pos, end_pos)
+        let (_, input_end_pos) = to_pos(input_segment_lane);
+        let (output_begin_pos, _) = to_pos(output_segment_lane);
+        (input_end_pos, output_begin_pos)
     }
 
     // TODO: memoize
@@ -123,7 +124,8 @@ impl<'a> road::JunctionLaneContext<'a> {
         let to_lyon_point = |p: Pos| lyon_geom::Point::new(p.x, p.y);
         let to_lyon_vector = |v: Vector| lyon_geom::Vector::new(v.x, v.y);
         let to_line = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
-            let segment_ctx = self.junction.network.get_segment_context(segment_id).unwrap();
+            let segment = self.junction.network.segments.get(&segment_id).unwrap();
+            let segment_ctx = SegmentContext::new(self.junction.network, segment_id, segment);
             let segment_lane = segment_ctx.segment.get_lanes(direction).get(&rank).unwrap();
             let segment_lane_ctx =
                 SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane);
@@ -140,7 +142,7 @@ impl<'a> road::JunctionLaneContext<'a> {
         let output_lane_line = to_line(output_segment_lane);
         let intersect_pos = match input_lane_line.intersection(&output_lane_line) {
             None => begin_pos + 0.5 * (end_pos - begin_pos),
-            Some(p) => Pos::new(p.x, p.y)
+            Some(p) => Pos::new(p.x, p.y),
         };
         QuadraticBezierSegment {
             from: to_lyon_point(begin_pos),

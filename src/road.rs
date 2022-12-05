@@ -93,26 +93,6 @@ impl Network {
         }
     }
 
-    pub fn get_segment_context(
-        &self,
-        segment_id: SegmentId,
-    ) -> Result<SegmentContext, RoutieError> {
-        match self.segments.get(&segment_id) {
-            None => Err(RoutieError::InvalidId),
-            Some(segment) => Ok(SegmentContext::new(&self, segment_id, segment)),
-        }
-    }
-
-    pub fn get_junction_context(
-        &self,
-        junction_id: JunctionId,
-    ) -> Result<JunctionContext, RoutieError> {
-        match self.junctions.get(&junction_id) {
-            None => Err(RoutieError::InvalidId),
-            Some(junction) => Ok(JunctionContext::new(&self, junction_id, junction)),
-        }
-    }
-
     pub fn connect_junctions(&mut self) {
         for (junction_id, junction) in self.junctions.enumerate_mut() {
             let segment_ids = if let Some(ids) = self.junction_segments.get(&junction_id) {
@@ -291,8 +271,9 @@ impl<'a> SegmentContext<'a> {
     }
     pub fn get_junctions(&self) -> (JunctionContext, JunctionContext) {
         let (begin_id, end_id) = self.network.get_segment_junctions(self.id).unwrap();
-        let id_to_junc = |id| self.network.get_junction_context(id).unwrap();
-        (id_to_junc(begin_id), id_to_junc(end_id))
+        let id_to_junc_ctx =
+            |id| JunctionContext::new(self.network, id, self.network.junctions.get(&id).unwrap());
+        (id_to_junc_ctx(begin_id), id_to_junc_ctx(end_id))
     }
 }
 impl<'a> SegmentLaneContext<'a> {
