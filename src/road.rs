@@ -6,8 +6,7 @@ use crate::{
     util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore}, actor::Actor,
 };
 
-#[derive(Debug, PartialEq, PartialOrd)]
-pub struct PosParam(pub f64);
+pub type PosParam = f64;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Direction {
@@ -24,14 +23,12 @@ define_index_type!(JunctionLaneId);
 
 pub struct SegmentLane {
     pub direction: Direction,
-    #[allow(dead_code)]
-    actors: OrderedSkipMap<PosParam, Actor>,
+    pub actors: OrderedSkipMap<PosParam, Actor>,
 }
 
 pub struct JunctionLane {
     #[allow(dead_code)]
     actors: OrderedSkipMap<PosParam, Actor>,
-    // curve: QuadraticBezierSegment<f64>
 }
 
 pub struct Segment {

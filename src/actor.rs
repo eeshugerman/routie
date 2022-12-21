@@ -1,10 +1,7 @@
 extern crate nalgebra;
 
-use nalgebra::Point2;
-
 use crate::road::{Direction, JunctionLaneContext, PosParam, SegmentContext, SegmentLaneContext};
 
-#[allow(dead_code)]
 pub struct Actor {
     // max_speed: f64,
     // route: Option<Vec<RouteStep>>,
@@ -12,15 +9,27 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn new() -> Self { Self {} }
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
-pub enum ActorLaneContext<'a> {
-    Segment(SegmentLaneContext<'a>),
-    Junction(JunctionLaneContext<'a>),
-}
-
+#[allow(dead_code)]
 pub enum ActorContext<'a> {
-    OnRoad { pos_param: PosParam, lane_ctx: ActorLaneContext<'a> },
-    OffRoad { pos_param: PosParam, segment_ctx: SegmentContext<'a>, segment_side: Direction },
+    OnRoadSegment {
+        pos_param: PosParam,
+        lane_ctx: &'a SegmentLaneContext<'a>,
+        actor: &'a Actor,
+    },
+    OnRoadJunction {
+        pos_param: PosParam,
+        lane_ctx: &'a JunctionLaneContext<'a>,
+        actor: &'a Actor,
+    },
+    OffRoad {
+        pos_param: PosParam,
+        segment_ctx: SegmentContext<'a>,
+        segment_side: Direction,
+        actor: &'a Actor,
+    },
 }

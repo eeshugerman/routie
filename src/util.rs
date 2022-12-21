@@ -65,14 +65,14 @@ pub mod seq_indexed_store {
 pub mod ordered_skip_map {
     use std::{cmp::Ordering, ops::Bound};
 
-    use skiplist::{skiplist::Iter, OrderedSkipList};
+    use skiplist::OrderedSkipList;
 
     pub struct OrderedSkipMap<K, V> {
         null_value_builder: fn() -> V,
         data: OrderedSkipList<(K, V)>,
     }
 
-    impl<K: PartialOrd, V> OrderedSkipMap<K, V> {
+    impl<K: Copy + PartialOrd, V> OrderedSkipMap<K, V> {
         pub fn new(null_value_builder: fn() -> V) -> Self {
             Self {
                 null_value_builder,
@@ -90,11 +90,19 @@ pub mod ordered_skip_map {
         pub fn insert(&mut self, key: K, value: V) {
             self.data.insert((key, value));
         }
-        pub fn range(&self, min: K, max: K) -> Iter<'_, (K, V)> {
+
+        // TODO: is this going to work?
+        pub fn remove(&mut self, key: K) {
+            self.data.remove(&(key, (self.null_value_builder)()));
+        }
+        pub fn enumerate_range(&self, min: K, max: K) -> impl Iterator<Item = &(K, V)>{
             self.data.range(
                 Bound::Included(&(min, (self.null_value_builder)())),
-                Bound::Excluded(&(max, (self.null_value_builder)())),
+                Bound::Included(&(max, (self.null_value_builder)())),
             )
+        }
+        pub fn enumerate(&self) -> impl Iterator<Item = &(K, V)> {
+            self.data.range(Bound::Unbounded, Bound::Unbounded)
         }
     }
 }

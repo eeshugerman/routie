@@ -31,7 +31,7 @@ fn main() {
 
     let s1 = network.add_segment(j1, j2);
     let l1 = s1.add_lane(road::Direction::Backward);
-    l1.add_actor(PosParam(0.5));
+    l1.add_actor(0.5);
     let _l2 = s1.add_lane(road::Direction::Forward);
 
 
@@ -50,6 +50,8 @@ fn main() {
     network.connect_junctions();
 
     let artist = draw::Artist::new(&surface, &network);
+    artist.draw_road_network();
+
     // for i in 0..10 {
     //     artist.draw_road_network();
     //     // network

@@ -5,12 +5,10 @@ use cairo::{Context, ImageSurface};
 use lyon_geom::CubicBezierSegment;
 use nalgebra::{Point2, Rotation2, Vector2};
 
-use crate::constants::{
-    FILLED_SHAPE_BORDER_WIDTH, ROAD_JUNCTION_COLOR, ROAD_JUNCTION_RADIUS, ROAD_LANE_ARROW_SIZE,
-    ROAD_LANE_COLOR, ROAD_LANE_WIDTH_VISUAL, ROAD_SEGMENT_COLOR,
-};
-use crate::road;
+use crate::actor::ActorContext;
+use crate::constants;
 use crate::spatial::LineLike;
+use crate::{actor, road};
 
 pub const IMAGE_SIZE: i32 = 600;
 const I_HAT: Vector2<f64> = Vector2::new(1.0, 0.0);
@@ -49,23 +47,23 @@ impl Artist<'_> {
     }
 
     fn draw_road_junction_lane(&self, lane_ctx: &road::JunctionLaneContext) {
-        let (red, green, blue) = ROAD_LANE_COLOR;
+        let (red, green, blue) = constants::ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
-        let CubicBezierSegment{ from, ctrl1, ctrl2, to} = lane_ctx.get_curve().to_cubic();
+        self.cairo_ctx.set_line_width(constants::ROAD_LANE_WIDTH_VISUAL);
+        let CubicBezierSegment { from, ctrl1, ctrl2, to } = lane_ctx.get_curve().to_cubic();
         self.cairo_ctx.move_to(from.x, from.y);
         self.cairo_ctx.curve_to(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
         self.cairo_ctx.stroke().unwrap();
     }
 
     fn draw_road_junction(&self, junction_ctx: &road::JunctionContext) {
-        let (red, green, blue) = ROAD_JUNCTION_COLOR;
+        let (red, green, blue) = constants::ROAD_JUNCTION_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
-        self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
+        self.cairo_ctx.set_line_width(constants::FILLED_SHAPE_BORDER_WIDTH);
         self.draw_regular_polygon(
             junction_ctx.junction.pos,
             4,
-            ROAD_JUNCTION_RADIUS * f64::sqrt(2.0),
+            constants::ROAD_JUNCTION_RADIUS * f64::sqrt(2.0),
             FRAC_PI_4,
         );
         self.cairo_ctx.stroke().unwrap();
@@ -75,25 +73,53 @@ impl Artist<'_> {
         }
     }
 
+    fn draw_actor(&self, actor_ctx: &actor::ActorContext) {
+        let (red, green, blue) = constants::ACTOR_COLOR;
+        self.cairo_ctx.set_source_rgb(red, green, blue);
+        self.cairo_ctx.set_line_width(constants::FILLED_SHAPE_BORDER_WIDTH);
+
+        let actor_pos = match actor_ctx {
+            ActorContext::OnRoadSegment { pos_param, lane_ctx, actor } => {
+                let (lane_begin_pos, _) = lane_ctx.get_pos();
+                lane_begin_pos + *pos_param * lane_ctx.get_v()
+            }
+            ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => {
+                todo!()
+            }
+            ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
+                todo!()
+            }
+        };
+
+        self.cairo_ctx.arc(actor_pos.x, actor_pos.y, constants::ACTOR_RADIUS_VISUAL, 0.0, 2.0 * PI);
+        self.cairo_ctx.fill().unwrap();
+    }
+
     fn draw_road_segment_lane(&self, lane_ctx: &road::SegmentLaneContext) {
-        let (red, green, blue) = ROAD_LANE_COLOR;
+        let (red, green, blue) = constants::ROAD_LANE_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
 
-        self.cairo_ctx.set_line_width(ROAD_LANE_WIDTH_VISUAL);
+        self.cairo_ctx.set_line_width(constants::ROAD_LANE_WIDTH_VISUAL);
         let (begin_pos, end_pos) = lane_ctx.get_pos();
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke().unwrap();
 
-        self.cairo_ctx.set_line_width(FILLED_SHAPE_BORDER_WIDTH);
-        let vec = lane_ctx.get_v(); // can't figure out how to destructure this
-        let theta = FRAC_PI_2 - vec.x.atan2(vec.y);
-        self.draw_regular_polygon(lane_ctx.get_midpoint(), 3, ROAD_LANE_ARROW_SIZE, theta);
+        self.cairo_ctx.set_line_width(constants::FILLED_SHAPE_BORDER_WIDTH);
+        let arrow_vec = lane_ctx.get_v(); // can't figure out how to destructure this
+        let arrow_theta = FRAC_PI_2 - arrow_vec.x.atan2(arrow_vec.y);
+        let arrow_size = constants::ROAD_LANE_ARROW_SIZE;
+        self.draw_regular_polygon(lane_ctx.get_midpoint(), 3, arrow_size, arrow_theta);
         self.cairo_ctx.fill().unwrap();
+
+        for (pos_param, actor) in lane_ctx.lane.actors.enumerate() {
+            let actor_ctx = ActorContext::OnRoadSegment { pos_param: *pos_param, lane_ctx, actor };
+            self.draw_actor(&actor_ctx);
+        }
     }
 
     fn draw_road_segment(&self, segment_ctx: &road::SegmentContext) {
-        let (red, green, blue) = ROAD_SEGMENT_COLOR;
+        let (red, green, blue) = constants::ROAD_SEGMENT_COLOR;
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(segment_ctx.get_width());
 
