@@ -1,12 +1,13 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
-use crate::{error::RoutieError, spatial::Pos, util::seq_indexed_store::SeqIndexedStore};
+use crate::{
+    error::RoutieError,
+    spatial::Pos,
+    util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore}, actor::Actor,
+};
 
-#[derive(Debug)]
-pub struct Actor {}
-
-#[derive(Debug)]
-pub struct PosParam(f64);
+#[derive(Debug, PartialEq, PartialOrd)]
+pub struct PosParam(pub f64);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Direction {
@@ -24,19 +25,19 @@ define_index_type!(JunctionLaneId);
 pub struct SegmentLane {
     pub direction: Direction,
     #[allow(dead_code)]
-    actors: BTreeMap<PosParam, Actor>,
+    actors: OrderedSkipMap<PosParam, Actor>,
 }
 
 pub struct JunctionLane {
     #[allow(dead_code)]
-    actors: BTreeMap<PosParam, Actor>,
+    actors: OrderedSkipMap<PosParam, Actor>,
     // curve: QuadraticBezierSegment<f64>
 }
 
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
     #[allow(dead_code)]
-    actors: BTreeMap<PosParam, Actor>,
+    actors: OrderedSkipMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
@@ -183,7 +184,7 @@ impl Segment {
             forward_lanes: SeqIndexedStore::new(),
             backward_lanes: SeqIndexedStore::new(),
             #[allow(dead_code)]
-            actors: BTreeMap::new(),
+            actors: OrderedSkipMap::new(Actor::new),
         }
     }
     pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
@@ -207,13 +208,18 @@ impl Segment {
 
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
-        Self { direction, actors: BTreeMap::new() }
+        Self { direction, actors: OrderedSkipMap::new(Actor::new) }
+    }
+
+    pub fn add_actor(&mut self, pos_param: PosParam) {
+        let actor = Actor {};
+        self.actors.insert(pos_param, actor);
     }
 }
 
 impl JunctionLane {
     pub fn new() -> Self {
-        Self { actors: BTreeMap::new() }
+        Self { actors: OrderedSkipMap::new(Actor::new) }
     }
 }
 

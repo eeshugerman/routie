@@ -6,11 +6,13 @@ use crate::road::{Direction, JunctionLaneContext, PosParam, SegmentContext, Segm
 
 #[allow(dead_code)]
 pub struct Actor {
-    id: i32,
-    location: Point2<f64>,
-    max_speed: f64,
+    // max_speed: f64,
     // route: Option<Vec<RouteStep>>,
     // agenda: Vec<AgendaStep>
+}
+
+impl Actor {
+    pub fn new() -> Self { Self {} }
 }
 
 pub enum ActorLaneContext<'a> {

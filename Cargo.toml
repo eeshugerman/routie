@@ -12,3 +12,4 @@ png = "0.17"
 cairo-rs = { version = "0.15", features = ["png"] }
 nalgebra = "0.31"
 lyon_geom = "1.0.3"
+skiplist = "0.4.0"

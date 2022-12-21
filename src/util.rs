@@ -61,3 +61,40 @@ pub mod seq_indexed_store {
         };
     }
 }
+
+pub mod ordered_skip_map {
+    use std::{cmp::Ordering, ops::Bound};
+
+    use skiplist::{skiplist::Iter, OrderedSkipList};
+
+    pub struct OrderedSkipMap<K, V> {
+        null_value_builder: fn() -> V,
+        data: OrderedSkipList<(K, V)>,
+    }
+
+    impl<K: PartialOrd, V> OrderedSkipMap<K, V> {
+        pub fn new(null_value_builder: fn() -> V) -> Self {
+            Self {
+                null_value_builder,
+                data: unsafe {
+                    OrderedSkipList::with_comp(|a: &(K, V), b: &(K, V)| {
+                        if a.0 < b.0 {
+                            Ordering::Less
+                        } else {
+                            Ordering::Greater
+                        }
+                    })
+                },
+            }
+        }
+        pub fn insert(&mut self, key: K, value: V) {
+            self.data.insert((key, value));
+        }
+        pub fn range(&self, min: K, max: K) -> Iter<'_, (K, V)> {
+            self.data.range(
+                Bound::Included(&(min, (self.null_value_builder)())),
+                Bound::Excluded(&(max, (self.null_value_builder)())),
+            )
+        }
+    }
+}

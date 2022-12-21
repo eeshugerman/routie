@@ -17,6 +17,7 @@ extern crate log;
 use cairo::{Format, ImageSurface};
 use draw::IMAGE_SIZE;
 use nalgebra::Point2;
+use road::PosParam;
 
 fn main() {
     env_logger::init();
@@ -29,8 +30,10 @@ fn main() {
     let j4 = network.add_junction(Point2::new(0.75, 0.75));
 
     let s1 = network.add_segment(j1, j2);
-    let _l1 = s1.add_lane(road::Direction::Backward);
+    let l1 = s1.add_lane(road::Direction::Backward);
+    l1.add_actor(PosParam(0.5));
     let _l2 = s1.add_lane(road::Direction::Forward);
+
 
     let s2 = network.add_segment(j3, j4);
     let _l3 = s2.add_lane(road::Direction::Backward);
@@ -47,7 +50,10 @@ fn main() {
     network.connect_junctions();
 
     let artist = draw::Artist::new(&surface, &network);
-    artist.draw_road_network();
+    // for i in 0..10 {
+    //     artist.draw_road_network();
+    //     // network
+    // }
 
     let mut file = File::create("file.png").unwrap();
     surface.write_to_png(&mut file).unwrap();
