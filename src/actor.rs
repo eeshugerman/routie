@@ -33,3 +33,16 @@ pub enum ActorContext<'a> {
         actor: &'a Actor,
     },
 }
+
+impl<'a> ActorContext<'a> {
+    pub fn advance(&mut self) {
+        match self {
+            ActorContext::OnRoadSegment { pos_param, lane_ctx, actor } => {
+                lane_ctx.lane.actors.remove(*pos_param);
+                lane_ctx.lane.actors.insert(*pos_param + 0.1, **actor);
+            },
+            ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => todo!(),
+            ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => todo!(),
+        }
+    }
+}

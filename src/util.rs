@@ -92,8 +92,11 @@ pub mod ordered_skip_map {
         }
 
         // TODO: is this going to work?
-        pub fn remove(&mut self, key: K) {
-            self.data.remove(&(key, (self.null_value_builder)()));
+        pub fn remove(&mut self, key: K) -> Option<V> {
+            match self.data.remove(&(key, (self.null_value_builder)())) {
+                Some((_, val)) => Some(val),
+                None => None
+            }
         }
         pub fn enumerate_range(&self, min: K, max: K) -> impl Iterator<Item = &(K, V)>{
             self.data.range(

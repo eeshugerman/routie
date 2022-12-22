@@ -9,6 +9,7 @@ mod draw;
 mod error;
 mod road;
 mod spatial;
+mod simulate;
 
 use std::fs::File;
 
@@ -17,7 +18,6 @@ extern crate log;
 use cairo::{Format, ImageSurface};
 use draw::IMAGE_SIZE;
 use nalgebra::Point2;
-use road::PosParam;
 
 fn main() {
     env_logger::init();
@@ -50,13 +50,11 @@ fn main() {
     network.connect_junctions();
 
     let artist = draw::Artist::new(&surface, &network);
-    artist.draw_road_network();
 
-    // for i in 0..10 {
-    //     artist.draw_road_network();
-    //     // network
-    // }
+    for i in 0..5 {
+        artist.draw_road_network();
+        let mut file = File::create(format!("frames/{}.png", i)).unwrap();
+        surface.write_to_png(&mut file).unwrap();
+    }
 
-    let mut file = File::create("file.png").unwrap();
-    surface.write_to_png(&mut file).unwrap();
 }
