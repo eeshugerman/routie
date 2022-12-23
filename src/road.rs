@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
+    actor::Actor,
     error::RoutieError,
     spatial::Pos,
-    util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore}, actor::Actor,
+    util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore},
 };
 
 pub type PosParam = f64;
@@ -21,26 +22,14 @@ define_index_type!(SegmentId);
 define_index_type!(SegmentLaneRank);
 define_index_type!(JunctionLaneId);
 
-pub struct SegmentLane {
-    pub direction: Direction,
-    pub actors: OrderedSkipMap<PosParam, Actor>,
-}
-
-pub struct JunctionLane {
-    #[allow(dead_code)]
-    actors: OrderedSkipMap<PosParam, Actor>,
-}
-
-pub struct Segment {
-    /// off-road only, otherwise they belong to lanes
-    #[allow(dead_code)]
-    actors: OrderedSkipMap<PosParam, Actor>,
-    pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
-    pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
-}
-
 pub type QualifiedSegmentLaneRank = (SegmentId, Direction, SegmentLaneRank);
 
+pub struct Network {
+    pub junctions: SeqIndexedStore<JunctionId, Junction>,
+    pub segments: SeqIndexedStore<SegmentId, Segment>,
+    junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
+    segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
+}
 pub struct Junction {
     pub pos: Pos,
     lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
@@ -48,12 +37,19 @@ pub struct Junction {
     lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
     lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
 }
-
-pub struct Network {
-    pub junctions: SeqIndexedStore<JunctionId, Junction>,
-    pub segments: SeqIndexedStore<SegmentId, Segment>,
-    junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
-    segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
+pub struct JunctionLane {
+    actors: OrderedSkipMap<PosParam, Actor>,
+}
+pub struct Segment {
+    /// off-road only, otherwise they belong to lanes
+    #[allow(dead_code)]
+    actors: OrderedSkipMap<PosParam, Actor>,
+    pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
+    pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
+}
+pub struct SegmentLane {
+    pub direction: Direction,
+    pub actors: OrderedSkipMap<PosParam, Actor>,
 }
 
 impl Network {
@@ -93,11 +89,12 @@ impl Network {
 
     pub fn connect_junctions(&mut self) {
         for (junction_id, junction) in self.junctions.enumerate_mut() {
+            let empty_set = HashSet::<SegmentId>::new();
             let segment_ids = match self.junction_segments.get(&junction_id) {
                 Some(ids) => ids,
                 None => {
                     log::warn!("Junction has no linked segments");
-                    continue;
+                    &empty_set
                 }
             };
             for incoming_segment_id in segment_ids {
@@ -146,7 +143,6 @@ impl Network {
         }
     }
 }
-
 impl Junction {
     pub fn new(pos: Pos) -> Self {
         Self {
@@ -174,7 +170,11 @@ impl Junction {
         self.lanes.enumerate()
     }
 }
-
+impl JunctionLane {
+    pub fn new() -> Self {
+        Self { actors: OrderedSkipMap::new(Actor::new) }
+    }
+}
 impl Segment {
     pub fn new() -> Self {
         Self {
@@ -202,7 +202,6 @@ impl Segment {
         }
     }
 }
-
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
         Self { direction, actors: OrderedSkipMap::new(Actor::new) }
@@ -211,12 +210,6 @@ impl SegmentLane {
     pub fn add_actor(&mut self, pos_param: PosParam) {
         let actor = Actor {};
         self.actors.insert(pos_param, actor);
-    }
-}
-
-impl JunctionLane {
-    pub fn new() -> Self {
-        Self { actors: OrderedSkipMap::new(Actor::new) }
     }
 }
 
@@ -230,7 +223,6 @@ pub struct JunctionLaneContext<'a> {
     pub id: JunctionLaneId,
     pub lane: &'a JunctionLane,
 }
-
 pub struct SegmentContext<'a> {
     pub network: &'a Network,
     pub id: SegmentId,
