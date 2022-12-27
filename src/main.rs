@@ -18,6 +18,8 @@ extern crate log;
 use cairo::{Format, ImageSurface};
 use draw::IMAGE_SIZE;
 use nalgebra::Point2;
+use simulate::advance;
+use util::CloneEmpty;
 
 fn main() {
     env_logger::init();
@@ -49,12 +51,13 @@ fn main() {
 
     network.connect_junctions();
 
-    let artist = draw::Artist::new(&surface, &network);
 
     for i in 0..5 {
+        let artist = draw::Artist::new(&surface, &network);
         artist.draw_road_network();
         let mut file = File::create(format!("frames/{}.png", i)).unwrap();
         surface.write_to_png(&mut file).unwrap();
+        network = advance(network);
     }
 
 }

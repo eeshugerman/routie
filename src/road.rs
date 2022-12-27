@@ -4,7 +4,7 @@ use crate::{
     actor::Actor,
     error::RoutieError,
     spatial::Pos,
-    util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore},
+    util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore, CloneEmpty},
 };
 
 pub type PosParam = f64;
@@ -42,7 +42,6 @@ pub struct JunctionLane {
 }
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
-    #[allow(dead_code)]
     actors: OrderedSkipMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
@@ -180,7 +179,6 @@ impl Segment {
         Self {
             forward_lanes: SeqIndexedStore::new(),
             backward_lanes: SeqIndexedStore::new(),
-            #[allow(dead_code)]
             actors: OrderedSkipMap::new(Actor::new),
         }
     }
@@ -206,10 +204,50 @@ impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
         Self { direction, actors: OrderedSkipMap::new(Actor::new) }
     }
-
     pub fn add_actor(&mut self, pos_param: PosParam) {
         let actor = Actor {};
         self.actors.insert(pos_param, actor);
+    }
+}
+
+impl CloneEmpty for SegmentLane {
+    fn clone_empty(&self) -> Self {
+        Self { direction: self.direction, actors: OrderedSkipMap::new(Actor::new) }
+    }
+}
+impl CloneEmpty for JunctionLane {
+    fn clone_empty(&self) -> Self {
+        Self { actors: OrderedSkipMap::new(Actor::new) }
+    }
+}
+impl CloneEmpty for Segment {
+    fn clone_empty(&self) -> Self {
+        Self {
+            forward_lanes: self.forward_lanes.clone_empty(),
+            backward_lanes: self.forward_lanes.clone_empty(),
+            actors: OrderedSkipMap::new(Actor::new),
+        }
+    }
+}
+impl CloneEmpty for Junction {
+    fn clone_empty(&self) -> Self {
+        Self {
+            pos: self.pos,
+            lanes: self.lanes.clone_empty(),
+            lane_inputs: self.lane_inputs.clone(),
+            lane_inputs_inverse: self.lane_inputs_inverse.clone(),
+            lane_outputs: self.lane_outputs.clone(),
+        }
+    }
+}
+impl CloneEmpty for Network {
+    fn clone_empty(&self) -> Self {
+        Self {
+            junctions: self.junctions.clone_empty(),
+            segments: self.segments.clone_empty(),
+            junction_segments: self.junction_segments.clone(),
+            segment_junctions: self.segment_junctions.clone(),
+        }
     }
 }
 
@@ -279,8 +317,7 @@ impl<'a> SegmentLaneContext<'a> {
         rank: SegmentLaneRank,
         lane: &'a SegmentLane,
     ) -> Self {
-        let context_lanes = segment_ctx.segment.get_lanes(direction);
-        assert!(match context_lanes.get(&rank) {
+        assert!(match segment_ctx.segment.get_lanes(direction).get(&rank) {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });

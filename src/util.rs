@@ -1,14 +1,30 @@
+pub trait CloneEmpty {
+    fn clone_empty(&self) -> Self;
+}
+
 #[macro_use]
 pub mod seq_indexed_store {
+    use super::CloneEmpty;
     use std::marker::PhantomData;
+
     pub struct SeqIndexedStore<U, T> {
         index_type: PhantomData<U>,
         data: Vec<T>,
     }
 
-    impl<U: From<usize> + Into<usize> + Copy, T> SeqIndexedStore<U, T> {
+    impl<U, T> SeqIndexedStore<U, T>
+    where
+        U: From<usize> + Into<usize> + Copy,
+        T: CloneEmpty,
+    {
         pub fn new() -> Self {
             Self { index_type: PhantomData, data: Vec::new() }
+        }
+        pub fn clone_empty(&self) -> Self {
+            Self {
+                index_type: self.index_type,
+                data: self.data.iter().map(|x| x.clone_empty()).collect(),
+            }
         }
         pub fn push(&mut self, val: T) -> U {
             let id = self.data.len();
@@ -95,10 +111,10 @@ pub mod ordered_skip_map {
         pub fn remove(&mut self, key: K) -> Option<V> {
             match self.data.remove(&(key, (self.null_value_builder)())) {
                 Some((_, val)) => Some(val),
-                None => None
+                None => None,
             }
         }
-        pub fn enumerate_range(&self, min: K, max: K) -> impl Iterator<Item = &(K, V)>{
+        pub fn enumerate_range(&self, min: K, max: K) -> impl Iterator<Item = &(K, V)> {
             self.data.range(
                 Bound::Included(&(min, (self.null_value_builder)())),
                 Bound::Included(&(max, (self.null_value_builder)())),
