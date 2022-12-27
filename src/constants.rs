@@ -2,6 +2,7 @@ type RGB = (f64, f64, f64);
 
 pub const ACTOR_COLOR: RGB = (0.1, 0.7, 0.1);
 pub const ACTOR_RADIUS_VISUAL: f64 = 0.01;
+pub const ACTOR_MAX_SPEED: f64 = 0.01;
 
 pub const ROAD_JUNCTION_COLOR: RGB = (0.7, 0.7, 0.7);
 pub const ROAD_JUNCTION_RADIUS: f64 = 0.05;

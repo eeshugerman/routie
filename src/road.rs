@@ -199,13 +199,22 @@ impl Segment {
             Backward => &self.backward_lanes,
         }
     }
+    pub fn get_lanes_mut(
+        &mut self,
+        direction: Direction,
+    ) -> &mut SeqIndexedStore<SegmentLaneRank, SegmentLane> {
+        match direction {
+            Forward => &mut self.forward_lanes,
+            Backward => &mut self.backward_lanes,
+        }
+    }
 }
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
         Self { direction, actors: OrderedSkipMap::new(Actor::new) }
     }
     pub fn add_actor(&mut self, pos_param: PosParam) {
-        let actor = Actor {};
+        let actor = Actor::new();
         self.actors.insert(pos_param, actor);
     }
 }
