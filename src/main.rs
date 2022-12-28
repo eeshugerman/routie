@@ -52,10 +52,20 @@ fn main() {
     network.connect_junctions();
 
 
+    for result in std::fs::read_dir("./frames/").unwrap() {
+        match result {
+            Ok(entry) => if entry.file_name() != ".gitkeep" {
+                std::fs::remove_file(entry.path()).unwrap()
+            },
+            Err(_) => (),
+        }
+    }
+
     for i in 0..5 {
+        println!("{:?}", network);
         let artist = draw::Artist::new(&surface, &network);
         artist.draw_road_network();
-        let mut file = File::create(format!("frames/{}.png", i)).unwrap();
+        let mut file = File::create(format!("./frames/{}.png", i)).unwrap();
         surface.write_to_png(&mut file).unwrap();
         network = advance(network);
     }

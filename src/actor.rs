@@ -2,12 +2,12 @@ extern crate nalgebra;
 
 use crate::{constants, road};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct AgendaStep;
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct RouteStep;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Actor {
     max_speed: f64,
     route: Option<Vec<RouteStep>>,

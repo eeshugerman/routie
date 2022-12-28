@@ -1,3 +1,4 @@
+
 pub trait CloneEmpty {
     fn clone_empty(&self) -> Self;
 }
@@ -7,6 +8,7 @@ pub mod seq_indexed_store {
     use super::CloneEmpty;
     use std::marker::PhantomData;
 
+    #[derive(Debug)]
     pub struct SeqIndexedStore<U, T> {
         index_type: PhantomData<U>,
         data: Vec<T>,
@@ -83,6 +85,7 @@ pub mod ordered_skip_map {
 
     use skiplist::OrderedSkipList;
 
+    #[derive(Debug)]
     pub struct OrderedSkipMap<K, V> {
         null_value_builder: fn() -> V,
         data: OrderedSkipList<(K, V)>,

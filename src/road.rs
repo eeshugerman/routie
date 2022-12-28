@@ -24,12 +24,14 @@ define_index_type!(JunctionLaneId);
 
 pub type QualifiedSegmentLaneRank = (SegmentId, Direction, SegmentLaneRank);
 
+#[derive(Debug)]
 pub struct Network {
     pub junctions: SeqIndexedStore<JunctionId, Junction>,
     pub segments: SeqIndexedStore<SegmentId, Segment>,
     junction_segments: HashMap<JunctionId, HashSet<SegmentId>>,
     segment_junctions: HashMap<SegmentId, (JunctionId, JunctionId)>,
 }
+#[derive(Debug)]
 pub struct Junction {
     pub pos: Pos,
     lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
@@ -37,17 +39,20 @@ pub struct Junction {
     lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
     lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
 }
+#[derive(Debug)]
 pub struct JunctionLane {
     actors: OrderedSkipMap<PosParam, Actor>,
 }
+#[derive(Debug)]
 pub struct Segment {
     /// off-road only, otherwise they belong to lanes
     actors: OrderedSkipMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
 }
+#[derive(Debug)]
 pub struct SegmentLane {
-    pub direction: Direction,
+    pub direction: Direction, // TODO: remove this; it belongs to the context
     pub actors: OrderedSkipMap<PosParam, Actor>,
 }
 
@@ -233,7 +238,7 @@ impl CloneEmpty for Segment {
     fn clone_empty(&self) -> Self {
         Self {
             forward_lanes: self.forward_lanes.clone_empty(),
-            backward_lanes: self.forward_lanes.clone_empty(),
+            backward_lanes: self.backward_lanes.clone_empty(),
             actors: OrderedSkipMap::new(Actor::new),
         }
     }
