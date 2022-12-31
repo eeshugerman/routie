@@ -2,10 +2,17 @@ extern crate nalgebra;
 
 use crate::{constants, road};
 
+
 #[derive(Clone, Debug)]
 struct AgendaStep;
+
 #[derive(Clone, Debug)]
-struct RouteStep;
+enum RouteStep {
+    ArriveAt { pos_param: road::PosParam },
+    LaneChange { lane: road::SegmentLaneRank },
+    TurnOnto { lane: road::JunctionLaneId },
+    ContinueOnto { lane: road::SegmentLaneRank },
+}
 
 #[derive(Clone, Debug)]
 pub struct Actor {
