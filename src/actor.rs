@@ -22,43 +22,32 @@ pub enum RouteStep {
 #[derive(Clone, Debug)]
 pub struct Actor {
     max_speed: f64,
-    route: Option<Vec<RouteStep>>,
+    route: Vec<RouteStep>,
     agenda: Vec<AgendaStep>,
 }
 
-pub enum RouteStatus {
-    None,
-    Done,
-    Enroute(RouteStep),
-}
+#[derive(Debug)]
+pub struct NullRouteError;
 
 type AgendaStatus = Option<AgendaStep>;
 
 impl Actor {
     pub fn new() -> Self {
-        Self { max_speed: constants::ACTOR_MAX_SPEED, route: Option::None, agenda: Vec::new() }
+        Self { max_speed: constants::ACTOR_MAX_SPEED, route: Vec::new(), agenda: Vec::new() }
     }
 
-    pub fn route_peek(&self) -> RouteStatus {
-        match &self.route {
-            None => RouteStatus::None,
-            Some(route) => match route.as_slice() {
-                [] => RouteStatus::Done,
-                [_rest @ .., tip] => RouteStatus::Enroute(*tip),
-            },
+    pub fn route_peek(&self) -> Option<RouteStep> {
+        match &self.route.as_slice() {
+            [] => None,
+            [_rest @ .., last] => Some(*last),
         }
     }
 
-    pub fn route_pop(&mut self) -> Option<RouteStep> {
-        match &mut self.route {
-            None => None,
-            Some(route) => {
-                if route.len() > 0 {
-                    Some(route.remove(route.len() - 1))
-                } else {
-                    None
-                }
-            }
+    pub fn route_pop(&mut self) -> Result<RouteStep, NullRouteError> {
+        if self.route.len() > 0 {
+            Ok(self.route.remove(self.route.len() - 1))
+        } else {
+            Err(NullRouteError)
         }
     }
 
@@ -101,12 +90,14 @@ impl ActorContext<'_> {
                 let pos_param_next_naive =
                     pos_param_current + actor.max_speed * constants::SIM_TIME_STEP;
                 match actor.route_peek() {
-                    RouteStatus::None => todo!(),
-                    RouteStatus::Done => todo!(),
-                    RouteStatus::Enroute(step) => match step {
+                    None => {
+                        // move off road
+                        todo!();
+                    },
+                    Some(step) => match step {
                         RouteStep::ArriveAt(pos_param_target) => {
+                            let mut actor_next = (*actor).clone();
                             if pos_param_next_naive >= pos_param_target {
-                                let mut actor_next = (*actor).clone();
                                 actor_next.route_pop().unwrap();
                                 lane_current.actors.insert(pos_param_target, actor_next)
                             } else {
@@ -120,7 +111,7 @@ impl ActorContext<'_> {
                             } else {
                                 lane_current.actors.insert(pos_param_next_naive, (*actor).clone())
                             }
-                        },
+                        }
                         RouteStep::ContinueOnto(lane_rank) => todo!(),
                     },
                 }
