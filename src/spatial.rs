@@ -5,6 +5,7 @@ use lyon_geom::QuadraticBezierSegment;
 use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::{
+    actor,
     constants::{ROAD_JUNCTION_RADIUS, ROAD_LANE_WIDTH, ROAD_SEGMENT_WIGGLE_ROOM_PCT},
     road::{
         self,
@@ -26,6 +27,27 @@ impl<'a> PointLike for road::JunctionContext<'a> {
     }
 }
 
+impl<'a> PointLike for actor::ActorContext<'a> {
+    fn get_pos(&self) -> Pos {
+        match self {
+            actor::ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
+                let (segment_begin_pos, _) = segment_ctx.get_pos();
+                let scalar = match segment_side {
+                    road::Direction::Forward => *pos_param,
+                    road::Direction::Backward => 1.0 - *pos_param,
+                };
+                let offset =  -1.0 * segment_ctx.get_width() * segment_ctx.get_v_ortho();
+                segment_begin_pos + (scalar * segment_ctx.get_v()) + offset
+            }
+            actor::ActorContext::OnRoadSegment { pos_param, lane_ctx, actor } => {
+                let (lane_begin_pos, _) = lane_ctx.get_pos();
+                lane_begin_pos + *pos_param * lane_ctx.get_v()
+            }
+            actor::ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => todo!(),
+        }
+    }
+}
+
 pub trait LineLike {
     fn get_width(&self) -> f64;
     fn get_pos(&self) -> (Pos, Pos);
@@ -41,7 +63,7 @@ pub trait LineLike {
     }
     fn get_v_ortho(&self) -> Vector {
         let rot = Rotation2::new(FRAC_PI_2);
-        return rot * self.get_v_norm();
+        rot * self.get_v_norm()
     }
 }
 

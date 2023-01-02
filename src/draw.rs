@@ -7,7 +7,7 @@ use nalgebra::{Point2, Rotation2, Vector2};
 
 use crate::actor::ActorContext;
 use crate::constants;
-use crate::spatial::LineLike;
+use crate::spatial::{PointLike, LineLike};
 use crate::{actor, road};
 
 pub const IMAGE_SIZE: i32 = 600;
@@ -78,19 +78,7 @@ impl Artist<'_> {
         self.cairo_ctx.set_source_rgb(red, green, blue);
         self.cairo_ctx.set_line_width(constants::FILLED_SHAPE_BORDER_WIDTH);
 
-        let actor_pos = match actor_ctx {
-            ActorContext::OnRoadSegment { pos_param, lane_ctx, actor } => {
-                let (lane_begin_pos, _) = lane_ctx.get_pos();
-                lane_begin_pos + *pos_param * lane_ctx.get_v()
-            }
-            ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => {
-                todo!()
-            }
-            ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
-                todo!()
-            }
-        };
-
+        let actor_pos = actor_ctx.get_pos();
         self.cairo_ctx.arc(actor_pos.x, actor_pos.y, constants::ACTOR_RADIUS_VISUAL, 0.0, 2.0 * PI);
         self.cairo_ctx.fill().unwrap();
     }
@@ -127,6 +115,25 @@ impl Artist<'_> {
         self.cairo_ctx.move_to(begin_pos.x, begin_pos.y);
         self.cairo_ctx.line_to(end_pos.x, end_pos.y);
         self.cairo_ctx.stroke().unwrap();
+
+        for (pos_param, actor) in segment_ctx.segment.forward_actors.enumerate() {
+            let actor_ctx = ActorContext::OffRoad {
+                pos_param: *pos_param,
+                segment_ctx,
+                segment_side: road::Direction::Forward,
+                actor,
+            };
+            self.draw_actor(&actor_ctx);
+        }
+        for (pos_param, actor) in segment_ctx.segment.backward_actors.enumerate() {
+            let actor_ctx = ActorContext::OffRoad {
+                pos_param: *pos_param,
+                segment_ctx,
+                segment_side: road::Direction::Backward,
+                actor,
+            };
+            self.draw_actor(&actor_ctx);
+        }
 
         for (rank, lane) in segment_ctx.segment.forward_lanes.enumerate() {
             self.draw_road_segment_lane(&road::SegmentLaneContext::new(

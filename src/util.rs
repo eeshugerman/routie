@@ -112,9 +112,8 @@ pub mod ordered_skip_map {
                 },
             }
         }
-        pub fn insert(&mut self, key: K, value: V) -> &mut V {
+        pub fn insert(&mut self, key: K, value: V) {
             self.data.insert((key, value));
-            &mut value
         }
 
         // TODO: is this going to work?

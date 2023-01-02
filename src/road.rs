@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    actor::Actor,
+    actor::{self, Actor},
     error::RoutieError,
     spatial::Pos,
     util::{ordered_skip_map::OrderedSkipMap, seq_indexed_store::SeqIndexedStore, CloneEmpty},
@@ -45,10 +45,11 @@ pub struct JunctionLane {
 }
 #[derive(Debug)]
 pub struct Segment {
-    /// off-road only, otherwise they belong to lanes
-    actors: OrderedSkipMap<PosParam, Actor>,
     pub forward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
     pub backward_lanes: SeqIndexedStore<SegmentLaneRank, SegmentLane>,
+    /// off-road only, otherwise they belong to lanes
+    pub forward_actors: OrderedSkipMap<PosParam, Actor>,
+    pub backward_actors: OrderedSkipMap<PosParam, Actor>,
 }
 #[derive(Debug)]
 pub struct SegmentLane {
@@ -70,7 +71,11 @@ impl Network {
         self.junctions.push(Junction::new(pos))
     }
 
-    pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> (SegmentId, &mut Segment) {
+    pub fn add_segment(
+        &mut self,
+        begin_id: JunctionId,
+        end_id: JunctionId,
+    ) -> (SegmentId, &mut Segment) {
         let id = self.segments.push(Segment::new());
         self.segment_junctions.insert(id, (begin_id, end_id));
         for junction in [begin_id, end_id].iter() {
@@ -175,9 +180,13 @@ impl Junction {
         self.lanes.enumerate()
     }
 }
+
+fn new_actors_store() -> OrderedSkipMap<PosParam, Actor> {
+    OrderedSkipMap::new(|| Actor::new(Vec::new()))
+}
 impl JunctionLane {
     pub fn new() -> Self {
-        Self { actors: OrderedSkipMap::new(Actor::new) }
+        Self { actors: new_actors_store() }
     }
 }
 impl Segment {
@@ -185,21 +194,30 @@ impl Segment {
         Self {
             forward_lanes: SeqIndexedStore::new(),
             backward_lanes: SeqIndexedStore::new(),
-            actors: OrderedSkipMap::new(Actor::new),
+            forward_actors: new_actors_store(),
+            backward_actors: new_actors_store(),
         }
     }
-    pub fn add_actor(&mut self, pos_param: PosParam, direction: Direction) -> &mut Actor {
-        let mut actor = Actor::new();
-        self.actors.insert(pos_param, actor)
+    pub fn add_actor(
+        &mut self,
+        pos_param: PosParam,
+        direction: Direction,
+        agenda: Vec<actor::Agendum>,
+    ) {
+        let actor = Actor::new(agenda);
+        match direction {
+            Forward => &mut self.forward_actors,
+            Backward => &mut self.backward_actors,
+        }
+        .insert(pos_param, actor)
     }
-    pub fn add_lane(&mut self, direction: Direction) -> SegmentLaneRank {
+    pub fn add_lane(&mut self, direction: Direction) {
         let lanes = match direction {
             Forward => &mut self.forward_lanes,
             Backward => &mut self.backward_lanes,
         };
         let rank = lanes.push(SegmentLane::new(direction));
         lanes.get_mut(&rank).unwrap();
-        rank
     }
     pub fn get_lanes(
         &self,
@@ -222,18 +240,18 @@ impl Segment {
 }
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
-        Self { direction, actors: OrderedSkipMap::new(Actor::new) }
+        Self { direction, actors: new_actors_store() }
     }
 }
 
 impl CloneEmpty for SegmentLane {
     fn clone_empty(&self) -> Self {
-        Self { direction: self.direction, actors: OrderedSkipMap::new(Actor::new) }
+        Self { direction: self.direction, actors: new_actors_store() }
     }
 }
 impl CloneEmpty for JunctionLane {
     fn clone_empty(&self) -> Self {
-        Self { actors: OrderedSkipMap::new(Actor::new) }
+        Self { actors: new_actors_store() }
     }
 }
 impl CloneEmpty for Segment {
@@ -241,7 +259,8 @@ impl CloneEmpty for Segment {
         Self {
             forward_lanes: self.forward_lanes.clone_empty(),
             backward_lanes: self.backward_lanes.clone_empty(),
-            actors: OrderedSkipMap::new(Actor::new),
+            forward_actors: new_actors_store(),
+            backward_actors: new_actors_store(),
         }
     }
 }

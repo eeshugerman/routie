@@ -23,7 +23,6 @@ use simulate::advance;
 
 fn main() {
     env_logger::init();
-    let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
     let mut network = road::Network::new();
 
     let j1 = network.add_junction(Point2::new(0.25, 0.25));
@@ -32,22 +31,23 @@ fn main() {
     let j4 = network.add_junction(Point2::new(0.75, 0.75));
 
     let (s1_id, s1) = network.add_segment(j1, j2);
-    let l1_rank = s1.add_lane(road::Direction::Backward);
-    let a1 = s1.add_actor(0.25, road::Direction::Backward);
-    a1.agenda_push(Agendum::TravelTo(actor::Location::OffRoad {
-        segment_id: s1_id,
-        segment_side: road::Direction::Backward,
-        pos_param: 0.75
-    }));
+    s1.add_lane(road::Direction::Backward);
+    s1.add_lane(road::Direction::Forward);
+    s1.add_actor(0.25, road::Direction::Backward, vec![
+        Agendum::TravelTo(actor::LocationOffRoad {
+            segment_id: s1_id,
+            segment_side: road::Direction::Backward,
+            pos_param: 0.75
+        })
+    ]);
 
-    let _l2 = s1.add_lane(road::Direction::Forward);
 
 
-    let s2_id, s2 = network.add_segment(j3, j4);
+    let (_, s2) = network.add_segment(j3, j4);
     s2.add_lane(road::Direction::Backward);
     s2.add_lane(road::Direction::Forward);
 
-    let s3_id, s3 = network.add_segment(j1, j3);
+    let (_, s3) = network.add_segment(j1, j3);
     s3.add_lane(road::Direction::Backward);
     s3.add_lane(road::Direction::Forward);
 
@@ -67,8 +67,10 @@ fn main() {
         }
     }
 
-    for i in 0..5 {
+    for i in 0..15 {
         println!("{:?}", network);
+        // why can't this go outside the loop??
+        let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
         let artist = draw::Artist::new(&surface, &network);
         artist.draw_road_network();
         let mut file = File::create(format!("./frames/{}.png", i)).unwrap();
