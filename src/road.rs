@@ -70,7 +70,7 @@ impl Network {
         self.junctions.push(Junction::new(pos))
     }
 
-    pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> &mut Segment {
+    pub fn add_segment(&mut self, begin_id: JunctionId, end_id: JunctionId) -> (SegmentId, &mut Segment) {
         let id = self.segments.push(Segment::new());
         self.segment_junctions.insert(id, (begin_id, end_id));
         for junction in [begin_id, end_id].iter() {
@@ -78,7 +78,8 @@ impl Network {
                 log::warn!("Segment loops! Is this what you want?");
             };
         }
-        self.segments.get_mut(&id).unwrap()
+        let segment = self.segments.get_mut(&id).unwrap();
+        (id, segment)
     }
 
     pub fn get_segment_junctions(
@@ -187,13 +188,18 @@ impl Segment {
             actors: OrderedSkipMap::new(Actor::new),
         }
     }
-    pub fn add_lane(&mut self, direction: Direction) -> &mut SegmentLane {
+    pub fn add_actor(&mut self, pos_param: PosParam, direction: Direction) -> &mut Actor {
+        let mut actor = Actor::new();
+        self.actors.insert(pos_param, actor)
+    }
+    pub fn add_lane(&mut self, direction: Direction) -> SegmentLaneRank {
         let lanes = match direction {
             Forward => &mut self.forward_lanes,
             Backward => &mut self.backward_lanes,
         };
-        let id = lanes.push(SegmentLane::new(direction));
-        lanes.get_mut(&id).unwrap()
+        let rank = lanes.push(SegmentLane::new(direction));
+        lanes.get_mut(&rank).unwrap();
+        rank
     }
     pub fn get_lanes(
         &self,
@@ -217,10 +223,6 @@ impl Segment {
 impl SegmentLane {
     pub fn new(direction: Direction) -> Self {
         Self { direction, actors: OrderedSkipMap::new(Actor::new) }
-    }
-    pub fn add_actor(&mut self, pos_param: PosParam) {
-        let actor = Actor::new();
-        self.actors.insert(pos_param, actor);
     }
 }
 

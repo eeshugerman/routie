@@ -42,6 +42,12 @@ pub mod seq_indexed_store {
         pub fn len(&self) -> usize {
             self.data.len()
         }
+        pub fn first_idx(&self) -> U {
+            U::from(0)
+        }
+        pub fn last_idx(&self) -> U{
+            U::from(self.len() - 1)
+        }
 
         pub fn enumerate(&self) -> impl Iterator<Item = (U, &T)> {
             self.data.iter().enumerate().map(|val| (U::from(val.0), val.1))
@@ -106,8 +112,9 @@ pub mod ordered_skip_map {
                 },
             }
         }
-        pub fn insert(&mut self, key: K, value: V) {
+        pub fn insert(&mut self, key: K, value: V) -> &mut V {
             self.data.insert((key, value));
+            &mut value
         }
 
         // TODO: is this going to work?

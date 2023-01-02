@@ -15,11 +15,11 @@ use std::fs::File;
 
 extern crate log;
 
+use actor::Agendum;
 use cairo::{Format, ImageSurface};
 use draw::IMAGE_SIZE;
 use nalgebra::Point2;
 use simulate::advance;
-use util::CloneEmpty;
 
 fn main() {
     env_logger::init();
@@ -31,19 +31,25 @@ fn main() {
     let j3 = network.add_junction(Point2::new(0.75, 0.25));
     let j4 = network.add_junction(Point2::new(0.75, 0.75));
 
-    let s1 = network.add_segment(j1, j2);
-    let l1 = s1.add_lane(road::Direction::Backward);
-    l1.add_actor(0.5);
+    let (s1_id, s1) = network.add_segment(j1, j2);
+    let l1_rank = s1.add_lane(road::Direction::Backward);
+    let a1 = s1.add_actor(0.25, road::Direction::Backward);
+    a1.agenda_push(Agendum::TravelTo(actor::Location::OffRoad {
+        segment_id: s1_id,
+        segment_side: road::Direction::Backward,
+        pos_param: 0.75
+    }));
+
     let _l2 = s1.add_lane(road::Direction::Forward);
 
 
-    let s2 = network.add_segment(j3, j4);
-    let _l3 = s2.add_lane(road::Direction::Backward);
-    let _l4 = s2.add_lane(road::Direction::Forward);
+    let s2_id, s2 = network.add_segment(j3, j4);
+    s2.add_lane(road::Direction::Backward);
+    s2.add_lane(road::Direction::Forward);
 
-    let s3 = network.add_segment(j1, j3);
-    let _l5 = s3.add_lane(road::Direction::Backward);
-    let _l6 = s3.add_lane(road::Direction::Forward);
+    let s3_id, s3 = network.add_segment(j1, j3);
+    s3.add_lane(road::Direction::Backward);
+    s3.add_lane(road::Direction::Forward);
 
     let _s4 = network.add_segment(j2, j4);
     // let l7 = s4.add_lane(road::Direction::Backward);
