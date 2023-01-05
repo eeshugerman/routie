@@ -32,11 +32,11 @@ impl<'a> PointLike for actor::ActorContext<'a> {
         match self {
             actor::ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
                 let (segment_begin_pos, _) = segment_ctx.get_pos();
-                let scalar = match segment_side {
-                    road::Direction::Forward => *pos_param,
-                    road::Direction::Backward => 1.0 - *pos_param,
+                let (offset_direction, scalar) = match segment_side {
+                    road::Direction::Forward => (1.0, *pos_param),
+                    road::Direction::Backward => (-1.0, 1.0 - *pos_param),
                 };
-                let offset =  -1.0 * segment_ctx.get_width() * segment_ctx.get_v_ortho();
+                let offset = offset_direction * segment_ctx.get_width() * segment_ctx.get_v_ortho();
                 segment_begin_pos + (scalar * segment_ctx.get_v()) + offset
             }
             actor::ActorContext::OnRoadSegment { pos_param, lane_ctx, actor } => {

@@ -106,10 +106,7 @@ fn to_off_road_location(
     LocationOffRoad {
         segment_id: lane_ctx.segment_ctx.id,
         segment_side: lane_ctx.direction,
-        pos_param: match lane_ctx.direction {
-            road::Direction::Forward => pos_param,
-            road::Direction::Backward => 1.0 - pos_param,
-        },
+        pos_param,
     }
 }
 fn to_on_road_location(
@@ -127,6 +124,9 @@ fn to_on_road_location(
             (Forward, _, _) => Ok((Forward, segment.forward_lanes.last_idx())),
             (Backward, _, _) => Ok((Backward, segment.backward_lanes.last_idx())),
         }?;
+    let pos_param = if segment_side == lane_direction { pos_param } else {
+        1.0 - pos_param
+    };
     Ok(LocationOnRoad { segment_id: segment_ctx.id, lane_direction, lane_rank, pos_param })
 }
 
