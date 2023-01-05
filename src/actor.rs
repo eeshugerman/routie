@@ -27,7 +27,7 @@ pub enum Agendum {
 pub enum RouteStep {
     ArriveAt(road::PosParam),
     LaneChange(road::SegmentLaneRank),
-    TurnOn(road::JunctionLaneId),
+    TurnAt(road::JunctionLaneId),
 }
 
 #[derive(Clone, Debug)]
@@ -57,10 +57,7 @@ impl Actor {
     }
 
     pub fn route_peek(&self) -> Option<RouteStep> {
-        match &self.route.as_slice() {
-            [] => None,
-            [_rest @ .., last] => Some(*last),
-        }
+        self.route.last().copied()
     }
 
     pub fn route_pop(&mut self) -> Result<RouteStep, NullRouteError> {
@@ -139,6 +136,7 @@ impl ActorContext<'_> {
             ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
                 match actor.agenda_peek() {
                     None => {
+                        // stay put
                         let segment = network.segments.get_mut(&segment_ctx.id).unwrap();
                         match segment_side {
                             road::Direction::Forward => &mut segment.forward_actors,
@@ -185,6 +183,7 @@ impl ActorContext<'_> {
                     pos_param_current + actor.max_speed * constants::SIM_TIME_STEP;
                 match actor.route_peek() {
                     None => {
+                        // done, move off road
                         let location = to_off_road_location(lane_ctx, *pos_param_current);
                         let segment = network.segments.get_mut(&location.segment_id).unwrap();
                         match location.segment_side {
@@ -204,7 +203,7 @@ impl ActorContext<'_> {
                             }
                         }
                         RouteStep::LaneChange(lane_rank) => todo!(),
-                        RouteStep::TurnOn(lane_id) => {
+                        RouteStep::TurnAt(lane_id) => {
                             if pos_param_next_naive > 1.0 {
                                 todo!()
                             } else {

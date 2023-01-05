@@ -68,12 +68,10 @@ fn main() {
     }
 
     for i in 0..15 {
-        println!("{:?}", network);
-        // why can't this go outside the loop??
+        // TODO: redraw actors only
         let surface = ImageSurface::create(Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
-        let artist = draw::Artist::new(&surface, &network);
-        artist.draw_road_network();
         let mut file = File::create(format!("./frames/{}.png", i)).unwrap();
+        draw::draw(&surface, &network);
         surface.write_to_png(&mut file).unwrap();
         network = advance(network);
     }
