@@ -1,4 +1,3 @@
-
 pub trait CloneEmpty {
     fn clone_empty(&self) -> Self;
 }
@@ -45,7 +44,7 @@ pub mod seq_indexed_store {
         pub fn first_idx(&self) -> U {
             U::from(0)
         }
-        pub fn last_idx(&self) -> U{
+        pub fn last_idx(&self) -> U {
             U::from(self.len() - 1)
         }
 

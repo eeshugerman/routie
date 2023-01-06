@@ -7,14 +7,14 @@ pub struct LocationOnRoad {
     pub segment_id: road::SegmentId,
     pub lane_direction: road::Direction,
     pub lane_rank: road::SegmentLaneRank,
-    pub pos_param: road::PosParam,
+    pub pos_param: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct LocationOffRoad {
     pub segment_id: road::SegmentId,
     pub segment_side: road::Direction,
-    pub pos_param: road::PosParam,
+    pub pos_param: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -25,7 +25,7 @@ pub enum Agendum {
 
 #[derive(Clone, Copy, Debug)]
 pub enum RouteStep {
-    ArriveAt(road::PosParam),
+    ArriveAt(f64),
     LaneChange(road::SegmentLaneRank),
     TurnAt(road::JunctionLaneId),
 }
@@ -124,9 +124,7 @@ fn to_on_road_location(
             (Forward, _, _) => Ok((Forward, segment.forward_lanes.last_idx())),
             (Backward, _, _) => Ok((Backward, segment.backward_lanes.last_idx())),
         }?;
-    let pos_param = if segment_side == lane_direction { pos_param } else {
-        1.0 - pos_param
-    };
+    let pos_param = if segment_side == lane_direction { pos_param } else { 1.0 - pos_param };
     Ok(LocationOnRoad { segment_id: segment_ctx.id, lane_direction, lane_rank, pos_param })
 }
 
