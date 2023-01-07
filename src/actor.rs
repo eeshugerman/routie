@@ -179,6 +179,7 @@ impl ActorContext<'_> {
                     .unwrap();
                 let pos_param_next_naive =
                     pos_param_current + actor.max_speed * constants::SIM_TIME_STEP;
+                let mut actor_next = (*actor).clone();
                 match actor.route_peek() {
                     None => {
                         // done, move off road
@@ -188,11 +189,10 @@ impl ActorContext<'_> {
                             road::Direction::Forward => &mut segment.forward_actors,
                             road::Direction::Backward => &mut segment.backward_actors,
                         }
-                        .insert(location.pos_param, (*actor).clone())
+                        .insert(location.pos_param, actor_next)
                     }
                     Some(step) => match step {
                         RouteStep::ArriveAt(pos_param_target) => {
-                            let mut actor_next = (*actor).clone();
                             if pos_param_next_naive >= pos_param_target {
                                 actor_next.route_pop().unwrap();
                                 lane_current.actors.insert(pos_param_target, actor_next);
@@ -205,7 +205,7 @@ impl ActorContext<'_> {
                             if pos_param_next_naive > 1.0 {
                                 todo!()
                             } else {
-                                lane_current.actors.insert(pos_param_next_naive, (*actor).clone());
+                                lane_current.actors.insert(pos_param_next_naive, actor_next);
                             }
                         }
                     },

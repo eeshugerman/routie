@@ -86,14 +86,13 @@ fn main() {
             "ffmpeg -r {framerate} -f rawvideo -pix_fmt bgra -s {width}x{height} -i pipe: -pix_fmt yuv420p -r {framerate} -y out.mp4",
             width = draw::IMAGE_SIZE,
             height = draw::IMAGE_SIZE,
-            framerate = 1
+            framerate = constants::SIM_FRAME_RATE
         )])
         .stdin(std::process::Stdio::piped())
         .spawn()
         .expect("failed to execute child");
     let mut frames: Vec<cairo::ImageSurfaceDataOwned> = Vec::new();
-    for _i in 0..15 {
-        println!("{}", _i);
+    for _i in 0..((constants::SIM_TIME_DURATION / constants::SIM_TIME_STEP) as i32) {
         // TODO: redraw actors only
         let surface =
             cairo::ImageSurface::create(cairo::Format::ARgb32, IMAGE_SIZE, IMAGE_SIZE).unwrap();
