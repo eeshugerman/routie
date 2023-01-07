@@ -1,9 +1,9 @@
 use crate::{actor, road, util::CloneEmpty};
 
-pub fn advance(network_last: road::Network) -> road::Network {
-    let mut network_next = network_last.clone_empty();
-    for (id, segment) in network_last.segments.enumerate() {
-        let segment_ctx = &road::SegmentContext::new(&network_last, id, segment);
+pub fn advance(network_past: road::Network) -> road::Network {
+    let mut network_future = network_past.clone_empty();
+    for (id, segment) in network_past.segments.enumerate() {
+        let segment_ctx = &road::SegmentContext::new(&network_past, id, segment);
         for (pos_param, actor) in segment.backward_actors.enumerate() {
             let actor_ctx = actor::ActorContext::OffRoad {
                 pos_param: *pos_param,
@@ -11,7 +11,7 @@ pub fn advance(network_last: road::Network) -> road::Network {
                 segment_side: road::Direction::Backward,
                 actor,
             };
-            actor_ctx.advance(&mut network_next);
+            actor_ctx.advance(&mut network_future);
         }
         for (pos_param, actor) in segment.forward_actors.enumerate() {
             let actor_ctx = actor::ActorContext::OffRoad {
@@ -20,7 +20,7 @@ pub fn advance(network_last: road::Network) -> road::Network {
                 segment_side: road::Direction::Forward,
                 actor,
             };
-            actor_ctx.advance(&mut network_next);
+            actor_ctx.advance(&mut network_future);
         }
         for (rank, lane) in segment.backward_lanes.enumerate() {
             let lane_ctx =
@@ -28,7 +28,7 @@ pub fn advance(network_last: road::Network) -> road::Network {
             for (pos_param, actor) in lane.actors.enumerate() {
                 let actor_ctx =
                     actor::ActorContext::OnRoadSegment { pos_param: *pos_param, lane_ctx, actor };
-                actor_ctx.advance(&mut network_next);
+                actor_ctx.advance(&mut network_future);
             }
         }
         for (rank, lane) in segment_ctx.segment.forward_lanes.enumerate() {
@@ -37,12 +37,12 @@ pub fn advance(network_last: road::Network) -> road::Network {
             for (pos_param, actor) in lane.actors.enumerate() {
                 let actor_ctx =
                     actor::ActorContext::OnRoadSegment { pos_param: *pos_param, lane_ctx, actor };
-                actor_ctx.advance(&mut network_next);
+                actor_ctx.advance(&mut network_future);
             }
         }
     }
-    for (id, junction) in network_last.junctions.enumerate() {
+    for (id, junction) in network_past.junctions.enumerate() {
         // TODO
     }
-    network_next
+    network_future
 }

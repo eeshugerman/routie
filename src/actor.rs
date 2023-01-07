@@ -129,16 +129,17 @@ fn to_on_road_location(
 }
 
 impl ActorContext<'_> {
-    pub fn advance(&self, network: &mut road::Network) {
+    pub fn advance(&self, network_future: &mut road::Network) {
         match self {
             ActorContext::OffRoad { pos_param, segment_ctx, segment_side, actor } => {
                 match actor.agenda_peek() {
                     None => {
                         // stay put
-                        let segment = network.segments.get_mut(&segment_ctx.id).unwrap();
+                        let segment_future =
+                            network_future.segments.get_mut(&segment_ctx.id).unwrap();
                         match segment_side {
-                            road::Direction::Forward => &mut segment.forward_actors,
-                            road::Direction::Backward => &mut segment.backward_actors,
+                            road::Direction::Forward => &mut segment_future.forward_actors,
+                            road::Direction::Backward => &mut segment_future.backward_actors,
                         }
                         .insert(*pos_param, (*actor).clone())
                     }
@@ -156,7 +157,7 @@ impl ActorContext<'_> {
                                 let start_location =
                                     to_on_road_location(segment_ctx, *segment_side, *pos_param)
                                         .unwrap();
-                                let start_lane = network
+                                let start_lane = network_future
                                     .segments
                                     .get_mut(&start_location.segment_id)
                                     .unwrap()
@@ -169,35 +170,33 @@ impl ActorContext<'_> {
                     }
                 }
             }
-            ActorContext::OnRoadSegment { pos_param: pos_param_current, lane_ctx, actor } => {
-                let lane_current = network
-                    .segments
-                    .get_mut(&lane_ctx.segment_ctx.id)
-                    .unwrap()
+            ActorContext::OnRoadSegment { pos_param: pos_param_prev, lane_ctx, actor } => {
+                let segment_future =
+                    network_future.segments.get_mut(&lane_ctx.segment_ctx.id).unwrap();
+                let lane_future = segment_future
                     .get_lanes_mut(lane_ctx.direction)
                     .get_mut(&lane_ctx.rank)
                     .unwrap();
                 let pos_param_next_naive =
-                    pos_param_current + actor.max_speed * constants::SIM_TIME_STEP;
-                let mut actor_next = (*actor).clone();
+                    pos_param_prev + actor.max_speed * constants::SIM_TIME_STEP;
+                let mut actor_future = (*actor).clone();
                 match actor.route_peek() {
                     None => {
                         // done, move off road
-                        let location = to_off_road_location(lane_ctx, *pos_param_current);
-                        let segment = network.segments.get_mut(&location.segment_id).unwrap();
+                        let location = to_off_road_location(lane_ctx, *pos_param_prev);
                         match location.segment_side {
-                            road::Direction::Forward => &mut segment.forward_actors,
-                            road::Direction::Backward => &mut segment.backward_actors,
+                            road::Direction::Forward => &mut segment_future.forward_actors,
+                            road::Direction::Backward => &mut segment_future.backward_actors,
                         }
-                        .insert(location.pos_param, actor_next)
+                        .insert(location.pos_param, actor_future)
                     }
                     Some(step) => match step {
                         RouteStep::ArriveAt(pos_param_target) => {
                             if pos_param_next_naive >= pos_param_target {
-                                actor_next.route_pop().unwrap();
-                                lane_current.actors.insert(pos_param_target, actor_next);
+                                actor_future.route_pop().unwrap();
+                                lane_future.actors.insert(pos_param_target, actor_future);
                             } else {
-                                lane_current.actors.insert(pos_param_next_naive, actor_next);
+                                lane_future.actors.insert(pos_param_next_naive, actor_future);
                             }
                         }
                         RouteStep::LaneChange(lane_rank) => todo!(),
@@ -205,7 +204,7 @@ impl ActorContext<'_> {
                             if pos_param_next_naive > 1.0 {
                                 todo!()
                             } else {
-                                lane_current.actors.insert(pos_param_next_naive, actor_next);
+                                lane_future.actors.insert(pos_param_next_naive, actor_future);
                             }
                         }
                     },
