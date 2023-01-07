@@ -292,7 +292,7 @@ pub struct JunctionContext<'a> {
     pub junction: &'a Junction,
 }
 pub struct JunctionLaneContext<'a> {
-    pub junction: &'a JunctionContext<'a>,
+    pub junction_ctx: &'a JunctionContext<'a>,
     pub id: JunctionLaneId,
     pub lane: &'a JunctionLane,
 }
@@ -331,7 +331,7 @@ impl<'a> JunctionLaneContext<'a> {
             None => false,
             Some(context_lane) => lane as *const _ == context_lane as *const _,
         });
-        Self { junction, id, lane }
+        Self { junction_ctx: junction, id, lane }
     }
 }
 impl<'a> SegmentContext<'a> {

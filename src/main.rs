@@ -31,46 +31,46 @@ fn main() {
     let (s1_id, s1) = network.add_segment(j1, j2);
     s1.add_lane(road::Direction::Backward);
     s1.add_lane(road::Direction::Forward);
-    s1.add_actor(
-        0.25,
-        road::Direction::Forward,
-        vec![Agendum::TravelTo(actor::LocationOffRoad {
-            segment_id: s1_id,
-            segment_side: road::Direction::Forward,
-            pos_param: 0.75,
-        })],
-    );
-    s1.add_actor(
-        0.1,
-        road::Direction::Backward,
-        vec![Agendum::TravelTo(actor::LocationOffRoad {
-            segment_id: s1_id,
-            segment_side: road::Direction::Backward,
-            pos_param: 0.9,
-        })],
-    );
+    // s1.add_actor(
+    //     0.25,
+    //     road::Direction::Forward,
+    //     vec![Agendum::TravelTo(actor::LocationOffRoad {
+    //         segment_id: s1_id,
+    //         segment_side: road::Direction::Forward,
+    //         pos_param: 0.75,
+    //     })],
+    // );
+    // s1.add_actor(
+    //     0.1,
+    //     road::Direction::Backward,
+    //     vec![Agendum::TravelTo(actor::LocationOffRoad {
+    //         segment_id: s1_id,
+    //         segment_side: road::Direction::Backward,
+    //         pos_param: 0.9,
+    //     })],
+    // );
 
     let (s2_id, s2) = network.add_segment(j3, j4);
     s2.add_lane(road::Direction::Backward);
-    s2.add_actor(
-        0.1,
-        road::Direction::Backward,
-        vec![Agendum::TravelTo(actor::LocationOffRoad {
-            segment_id: s2_id,
-            segment_side: road::Direction::Backward,
-            pos_param: 0.9,
-        })],
-    );
+    // s2.add_actor(
+    //     0.1,
+    //     road::Direction::Backward,
+    //     vec![Agendum::TravelTo(actor::LocationOffRoad {
+    //         segment_id: s2_id,
+    //         segment_side: road::Direction::Backward,
+    //         pos_param: 0.9,
+    //     })],
+    // );
 
     let (s3_id, s3) = network.add_segment(j1, j3);
-    s3.add_lane(road::Direction::Forward);
+    s3.add_lane(road::Direction::Backward);
     s3.add_actor(
-        0.1,
-        road::Direction::Forward,
+        0.6,
+        road::Direction::Backward,
         vec![Agendum::TravelTo(actor::LocationOffRoad {
-            segment_id: s3_id,
+            segment_id: s1_id,
             segment_side: road::Direction::Forward,
-            pos_param: 0.9,
+            pos_param: 0.5,
         })],
     );
 

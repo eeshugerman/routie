@@ -151,7 +151,14 @@ impl ActorContext<'_> {
                                 actor_next.agenda_pop().unwrap();
 
                                 // setup route. TODO: actual pathfinding, build route
-                                actor_next.route_push(RouteStep::ArriveAt(destination.pos_param));
+                                if destination.pos_param < *pos_param {
+                                    actor_next
+                                        .route_push(RouteStep::ArriveAt(destination.pos_param));
+                                    actor_next.route_push(RouteStep::TurnAt(0.into()));
+                                } else {
+                                    actor_next
+                                        .route_push(RouteStep::ArriveAt(destination.pos_param));
+                                }
 
                                 // move onto road
                                 let start_location =
@@ -171,15 +178,16 @@ impl ActorContext<'_> {
                 }
             }
             ActorContext::OnRoadSegment { pos_param: pos_param_prev, lane_ctx, actor } => {
+                let mut actor_future = (*actor).clone();
                 let segment_future =
                     network_future.segments.get_mut(&lane_ctx.segment_ctx.id).unwrap();
                 let lane_future = segment_future
                     .get_lanes_mut(lane_ctx.direction)
                     .get_mut(&lane_ctx.rank)
                     .unwrap();
+                // TODO: account for lane length
                 let pos_param_next_naive =
                     pos_param_prev + actor.max_speed * constants::SIM_TIME_STEP;
-                let mut actor_future = (*actor).clone();
                 match actor.route_peek() {
                     None => {
                         // done, move off road
@@ -202,7 +210,6 @@ impl ActorContext<'_> {
                         RouteStep::LaneChange(lane_rank) => todo!(),
                         RouteStep::TurnAt(lane_id) => {
                             if pos_param_next_naive > 1.0 {
-                                actor_future.route_pop().unwrap();
                                 let (begin_junction_id, end_junction_id) = network_future
                                     .get_segment_junctions(lane_ctx.segment_ctx.id)
                                     .unwrap();
@@ -222,7 +229,34 @@ impl ActorContext<'_> {
                     },
                 }
             }
-            ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => todo!(),
+            ActorContext::OnRoadJunction { pos_param: pos_param_prev, lane_ctx, actor } => {
+                let mut actor_future = (*actor).clone();
+                // TODO: account for lane length
+                let pos_param_next_naive =
+                    pos_param_prev + actor.max_speed * constants::SIM_TIME_STEP;
+                if pos_param_next_naive > 1.0 {
+                    actor_future.route_pop().unwrap();
+                    let (_, (segment_id, direction, segment_lane_rank)) =
+                        lane_ctx.junction_ctx.get_segment_lanes_for_junction_lane(lane_ctx.id);
+                    let segment_future = network_future.segments.get_mut(&segment_id).unwrap();
+                    let lane_future = match direction {
+                        road::Direction::Backward => &mut segment_future.backward_lanes,
+                        road::Direction::Forward => &mut segment_future.forward_lanes,
+                    }
+                    .get_mut(&segment_lane_rank)
+                    .unwrap();
+                    lane_future.actors.insert(pos_param_next_naive - 1.0, actor_future)
+                } else {
+                    let lane_future = network_future
+                        .junctions
+                        .get_mut(&lane_ctx.junction_ctx.id)
+                        .unwrap()
+                        .lanes
+                        .get_mut(&lane_ctx.id)
+                        .unwrap();
+                    lane_future.actors.insert(pos_param_next_naive, actor_future);
+                }
+            }
         }
     }
 }

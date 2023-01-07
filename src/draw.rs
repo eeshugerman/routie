@@ -31,6 +31,11 @@ fn draw_road_junction_lane(cairo_ctx: &cairo::Context, lane_ctx: &road::Junction
     cairo_ctx.move_to(from.x, from.y);
     cairo_ctx.curve_to(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
     cairo_ctx.stroke().unwrap();
+
+    for (pos_param, actor) in lane_ctx.lane.actors.enumerate() {
+        let actor_ctx = &actor::ActorContext::OnRoadJunction { pos_param: *pos_param, lane_ctx, actor };
+        draw_actor(cairo_ctx, actor_ctx);
+    }
 }
 
 fn draw_road_junction(cairo_ctx: &cairo::Context, junction_ctx: &road::JunctionContext) {

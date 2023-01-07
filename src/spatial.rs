@@ -44,9 +44,8 @@ impl<'a> PointLike for actor::ActorContext<'a> {
                 lane_begin_pos + *pos_param * lane_ctx.get_v()
             }
             actor::ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => {
-                let (curve_start_pos, _) = lane_ctx.get_pos();
                 let curve = lane_ctx.get_curve().sample(*pos_param);
-                curve_start_pos + Vector2::new(curve.x, curve.y)
+                Point2::new(curve.x, curve.y)
             },
         }
     }
@@ -132,11 +131,11 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
 impl<'a> road::JunctionLaneContext<'a> {
     pub fn get_pos(&self) -> (Pos, Pos) {
         let (input_segment_lane, output_segment_lane) =
-            self.junction.get_segment_lanes_for_junction_lane(self.id);
+            self.junction_ctx.get_segment_lanes_for_junction_lane(self.id);
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
-            let segment = self.junction.network.segments.get(&segment_id).unwrap();
-            let segment_ctx = SegmentContext::new(self.junction.network, segment_id, segment);
+            let segment = self.junction_ctx.network.segments.get(&segment_id).unwrap();
+            let segment_ctx = SegmentContext::new(self.junction_ctx.network, segment_id, segment);
             let segment_lane = segment.get_lanes(direction).get(&rank).unwrap();
             SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane).get_pos()
         };
@@ -150,8 +149,8 @@ impl<'a> road::JunctionLaneContext<'a> {
         let to_lyon_point = |p: Pos| lyon_geom::Point::new(p.x, p.y);
         let to_lyon_vector = |v: Vector| lyon_geom::Vector::new(v.x, v.y);
         let to_line = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
-            let segment = self.junction.network.segments.get(&segment_id).unwrap();
-            let segment_ctx = SegmentContext::new(self.junction.network, segment_id, segment);
+            let segment = self.junction_ctx.network.segments.get(&segment_id).unwrap();
+            let segment_ctx = SegmentContext::new(self.junction_ctx.network, segment_id, segment);
             let segment_lane = segment_ctx.segment.get_lanes(direction).get(&rank).unwrap();
             let segment_lane_ctx =
                 SegmentLaneContext::new(&segment_ctx, direction, rank, segment_lane);
@@ -163,7 +162,7 @@ impl<'a> road::JunctionLaneContext<'a> {
 
         let (begin_pos, end_pos) = self.get_pos();
         let (input_segment_lane, output_segment_lane) =
-            self.junction.get_segment_lanes_for_junction_lane(self.id);
+            self.junction_ctx.get_segment_lanes_for_junction_lane(self.id);
         let input_lane_line = to_line(input_segment_lane);
         let output_lane_line = to_line(output_segment_lane);
         let intersect_pos = match input_lane_line.intersection(&output_lane_line) {

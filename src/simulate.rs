@@ -42,7 +42,14 @@ pub fn advance(network_past: road::Network) -> road::Network {
         }
     }
     for (id, junction) in network_past.junctions.enumerate() {
-        // TODO
+        let junction_ctx = &road::JunctionContext::new(&network_past, id, junction);
+        for (id, lane) in junction.lanes.enumerate() {
+            let lane_ctx = &road::JunctionLaneContext::new(junction_ctx, id, lane);
+            for (pos_param, actor) in lane.actors.enumerate() {
+                let actor_ctx = &actor::ActorContext::OnRoadJunction { pos_param: *pos_param, lane_ctx, actor };
+                actor_ctx.advance(&mut network_future)
+            }
+        }
     }
     network_future
 }
