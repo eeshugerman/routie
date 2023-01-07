@@ -34,14 +34,14 @@ pub struct Network {
 #[derive(Debug)]
 pub struct Junction {
     pub pos: Pos,
-    lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
+    pub lanes: SeqIndexedStore<JunctionLaneId, JunctionLane>,
     lane_inputs: HashMap<QualifiedSegmentLaneRank, HashSet<JunctionLaneId>>,
     lane_inputs_inverse: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
     lane_outputs: HashMap<JunctionLaneId, QualifiedSegmentLaneRank>,
 }
 #[derive(Debug)]
 pub struct JunctionLane {
-    actors: OrderedSkipMap<PosParam, Actor>,
+    pub actors: OrderedSkipMap<PosParam, Actor>,
 }
 #[derive(Debug)]
 pub struct Segment {

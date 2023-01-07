@@ -202,7 +202,19 @@ impl ActorContext<'_> {
                         RouteStep::LaneChange(lane_rank) => todo!(),
                         RouteStep::TurnAt(lane_id) => {
                             if pos_param_next_naive > 1.0 {
-                                todo!()
+                                actor_future.route_pop().unwrap();
+                                let (begin_junction_id, end_junction_id) = network_future
+                                    .get_segment_junctions(lane_ctx.segment_ctx.id)
+                                    .unwrap();
+                                let junction_future = network_future
+                                    .junctions
+                                    .get_mut(&match lane_ctx.direction {
+                                        road::Direction::Backward => begin_junction_id,
+                                        road::Direction::Forward => end_junction_id,
+                                    })
+                                    .unwrap();
+                                let lane_future = junction_future.lanes.get_mut(&lane_id).unwrap();
+                                lane_future.actors.insert(pos_param_next_naive - 1.0, actor_future)
                             } else {
                                 lane_future.actors.insert(pos_param_next_naive, actor_future);
                             }

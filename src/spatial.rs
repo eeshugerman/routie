@@ -43,7 +43,11 @@ impl<'a> PointLike for actor::ActorContext<'a> {
                 let (lane_begin_pos, _) = lane_ctx.get_pos();
                 lane_begin_pos + *pos_param * lane_ctx.get_v()
             }
-            actor::ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => todo!(),
+            actor::ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => {
+                let (curve_start_pos, _) = lane_ctx.get_pos();
+                let curve = lane_ctx.get_curve().sample(*pos_param);
+                curve_start_pos + Vector2::new(curve.x, curve.y)
+            },
         }
     }
 }
