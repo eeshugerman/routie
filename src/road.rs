@@ -179,6 +179,28 @@ impl Junction {
     pub fn enumerate_lanes(&self) -> impl Iterator<Item = (JunctionLaneId, &JunctionLane)> {
         self.lanes.enumerate()
     }
+
+    // TODO: bubble up errors
+    pub fn get_segment_lanes_for_junction_lane(
+        &self,
+        lane_id: JunctionLaneId,
+    ) -> (QualifiedSegmentLaneRank, QualifiedSegmentLaneRank) {
+        let input_segment_lane = self.lane_inputs_inverse.get(&lane_id).unwrap();
+        let output_segment_lane = self.lane_outputs.get(&lane_id).unwrap();
+        (*input_segment_lane, *output_segment_lane)
+    }
+
+    // TODO: bubble up errors
+    pub fn get_outputs_for_input(
+        &self,
+        input: QualifiedSegmentLaneRank,
+    ) -> HashSet<QualifiedSegmentLaneRank> {
+        let junction_lanes = self.lane_inputs.get(&input).unwrap();
+        junction_lanes
+            .into_iter()
+            .map(|junction_lane| *self.lane_outputs.get(junction_lane).unwrap())
+            .collect()
+    }
 }
 
 fn new_actors_store() -> OrderedSkipMap<PosParam, Actor> {
@@ -311,14 +333,6 @@ pub struct SegmentLaneContext<'a> {
 impl<'a> JunctionContext<'a> {
     pub fn new(network: &'a Network, id: JunctionId, junction: &'a Junction) -> Self {
         Self { network, id, junction }
-    }
-    pub fn get_segment_lanes_for_junction_lane(
-        &self,
-        lane_id: JunctionLaneId,
-    ) -> (QualifiedSegmentLaneRank, QualifiedSegmentLaneRank) {
-        let input_segment_lane = self.junction.lane_inputs_inverse.get(&lane_id).unwrap();
-        let output_segment_lane = self.junction.lane_outputs.get(&lane_id).unwrap();
-        (*input_segment_lane, *output_segment_lane)
     }
 }
 impl<'a> JunctionLaneContext<'a> {

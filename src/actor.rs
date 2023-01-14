@@ -1,4 +1,5 @@
 extern crate nalgebra;
+extern crate pathfinding;
 
 use crate::{constants, road};
 
@@ -136,17 +137,34 @@ impl ActorContext<'_> {
                                 actor_pp.agenda_pop().unwrap();
 
                                 // setup route. TODO: actual pathfinding, build route
-                                if pos_param_dest < *pos_param {
-                                    actor_pp.route_push(RouteStep::ArriveAt(pos_param_dest));
-                                    actor_pp.route_push(RouteStep::TurnAt(0.into()));
-                                } else {
-                                    actor_pp.route_push(RouteStep::ArriveAt(pos_param_dest));
-                                }
+                                // if pos_param_dest < *pos_param {
+                                //     actor_pp.route_push(RouteStep::ArriveAt(pos_param_dest));
+                                //     actor_pp.route_push(RouteStep::TurnAt(0.into()));
+                                // } else {
+                                //     actor_pp.route_push(RouteStep::ArriveAt(pos_param_dest));
+                                // }
 
-                                // move onto road
                                 let (lane_direction_next, lane_rank_next, pos_param_next) =
                                     to_on_road_location(segment_ctx, *segment_side, *pos_param)
                                         .unwrap();
+
+                                let start: road::QualifiedSegmentLaneRank =
+                                    (segment_ctx.id, lane_direction_next, lane_rank_next);
+                                let route_raw = pathfinding::prelude::astar(
+                                    start,
+                                    |segment_lane @ (segment_id, direction, rank): road::QualifiedSegmentLaneRank| -> Vec<(road::QualifiedSegmentLaneRank, u32)>{
+                                        let (begin_junction_id, end_junction_id) = network_pp.get_segment_junctions(segment_id).unwrap();
+                                        let junction = network_pp.junctions.get(
+                                            &match direction {
+                                                road::Direction::Forward => end_junction_id,
+                                                road::Direction::Backward => begin_junction_id,
+                                            }
+                                        ).unwrap();
+                                        const cost: u32 = 1; // TODO
+                                        junction.get_outputs_for_input(segment_lane).into_iter().map(|step| (step, cost)).collect()
+                                    }
+                                );
+
                                 let lane_next_pp = network_pp
                                     .segments
                                     .get_mut(&segment_ctx.id)
@@ -210,12 +228,13 @@ impl ActorContext<'_> {
             ActorContext::OnRoadJunction { pos_param, lane_ctx, actor } => {
                 let mut actor_pp = (*actor).clone();
                 // TODO: account for lane length
-                let pos_param_next_naive =
-                    pos_param + actor.max_speed * constants::SIM_TIME_STEP;
+                let pos_param_next_naive = pos_param + actor.max_speed * constants::SIM_TIME_STEP;
                 if pos_param_next_naive > 1.0 {
                     actor_pp.route_pop().unwrap();
-                    let (_, (segment_id, direction, segment_lane_rank)) =
-                        lane_ctx.junction_ctx.get_segment_lanes_for_junction_lane(lane_ctx.id);
+                    let (_, (segment_id, direction, segment_lane_rank)) = lane_ctx
+                        .junction_ctx
+                        .junction
+                        .get_segment_lanes_for_junction_lane(lane_ctx.id);
                     let segment_pp = network_pp.segments.get_mut(&segment_id).unwrap();
                     let lane_pp = match direction {
                         road::Direction::Backward => &mut segment_pp.backward_lanes,

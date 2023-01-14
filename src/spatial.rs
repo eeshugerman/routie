@@ -131,7 +131,7 @@ impl<'a> LineLike for road::SegmentLaneContext<'a> {
 impl<'a> road::JunctionLaneContext<'a> {
     pub fn get_pos(&self) -> (Pos, Pos) {
         let (input_segment_lane, output_segment_lane) =
-            self.junction_ctx.get_segment_lanes_for_junction_lane(self.id);
+            self.junction_ctx.junction.get_segment_lanes_for_junction_lane(self.id);
 
         let to_pos = |(segment_id, direction, rank): QualifiedSegmentLaneRank| {
             let segment = self.junction_ctx.network.segments.get(&segment_id).unwrap();
@@ -162,7 +162,7 @@ impl<'a> road::JunctionLaneContext<'a> {
 
         let (begin_pos, end_pos) = self.get_pos();
         let (input_segment_lane, output_segment_lane) =
-            self.junction_ctx.get_segment_lanes_for_junction_lane(self.id);
+            self.junction_ctx.junction.get_segment_lanes_for_junction_lane(self.id);
         let input_lane_line = to_line(input_segment_lane);
         let output_lane_line = to_line(output_segment_lane);
         let intersect_pos = match input_lane_line.intersection(&output_lane_line) {
