@@ -67,11 +67,11 @@ fn main() {
     s3.add_actor(
         0.6,
         road::Direction::Backward,
-        vec![Agendum::TravelTo(actor::LocationOffRoad {
+        vec![Agendum::TravelTo {
             segment_id: s1_id,
             segment_side: road::Direction::Forward,
             pos_param: 0.5,
-        })],
+        }],
     );
 
     let _s4 = network.add_segment(j2, j4);
